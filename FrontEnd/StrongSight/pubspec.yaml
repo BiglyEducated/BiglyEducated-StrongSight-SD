@@ -60,6 +60,9 @@ flutter:
 
   assets:
     - strongsight/assets/images/logo.png
+    - strongsight/assets/images/google.png
+    - strongsight/assets/images/apple.png
+
 
   # To add assets to your application, add an assets section, like this:
   # assets:
