@@ -28,7 +28,7 @@ class _RegisterPageState extends State<RegisterPage> {
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    // After successful registration, navigate to home (replace with your logic)
+    //After successful registration, navigate to home (Replace w API later)
     Navigator.of(context).pushReplacementNamed('/home');
   }
 
@@ -55,8 +55,19 @@ class _RegisterPageState extends State<RegisterPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 10),
+                
+                const Text(
+                  "Let's Get Training!",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF094941),
+                  ),
+                ),
+                const SizedBox(height: 24),
 
-                // Full Name
+                //Full Name
                 TextFormField(
                   controller: _nameController,
                   decoration: _inputDecoration("Full Name"),
@@ -65,7 +76,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 14),
 
-                // Email
+                //Email
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -81,7 +92,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 14),
 
-                // Phone Number
+                //Phone Number
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
@@ -91,7 +102,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 14),
 
-                // Gender
+                //Gender
                 DropdownButtonFormField<String>(
                   value: _selectedGender,
                   items: const [
@@ -106,7 +117,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 14),
 
-                // Weight
+                //Weight
                 TextFormField(
                   controller: _weightController,
                   keyboardType: TextInputType.number,
@@ -116,7 +127,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 14),
 
-                // Height
+                //Height
                 Row(
                   children: [
                     Expanded(
@@ -142,7 +153,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 30),
 
-                // Continue Button
+                //Continue Button
                 SizedBox(
                   height: 52,
                   child: ElevatedButton(
@@ -181,7 +192,7 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  // Reusable Input Style
+  //Reusable Input Style
   InputDecoration _inputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,

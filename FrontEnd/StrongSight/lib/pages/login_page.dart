@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -23,8 +25,22 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+
+    //StrongSight color palette
+    const green = Color(0xFF094941);
+    const ivory = Color(0xFFF3EBD3);
+    const beige = Color(0xFFFCF5E3);
+    const espresso = Color(0xFF12110F);
+
+    final bgColor = isDark ? espresso : beige;
+    final cardColor = isDark ? const Color(0xFF1A1917) : Colors.white;
+    final textColor = isDark ? ivory : green;
+    final subTextColor = isDark ? const Color(0xFFD9CBB8) : Colors.black54;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF5E3), // Beige background
+      backgroundColor: bgColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -32,81 +48,86 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset(
-                  'assets/images/logo.png',
-                  height: 120,
-                ),
+                Image.asset('assets/images/logo.png', height: 120),
                 const SizedBox(height: 24),
-                const Text(
+                Text(
                   'StrongSight',
                   style: TextStyle(
                     fontSize: 30,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: textColor,
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
+                Text(
                   'Train with insight',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.black54,
-                  ),
+                  style: TextStyle(fontSize: 14, color: subTextColor),
                 ),
                 const SizedBox(height: 30),
 
-                // Email box
+                //Email 
                 TextField(
                   controller: _emailController,
+                  style: TextStyle(color: textColor),
                   decoration: InputDecoration(
                     hintText: 'Email',
+                    hintStyle: TextStyle(color: subTextColor),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: cardColor,
                     contentPadding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
+                      borderSide: BorderSide(color: green.withOpacity(0.5)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: green, width: 1.8),
                     ),
                   ),
                 ),
                 const SizedBox(height: 14),
 
-                // Password box
+                //Password
                 TextField(
                   controller: _passwordController,
                   obscureText: _obscure,
+                  style: TextStyle(color: textColor),
                   decoration: InputDecoration(
                     hintText: 'Password',
+                    hintStyle: TextStyle(color: subTextColor),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: cardColor,
                     contentPadding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
+                      borderSide: BorderSide(color: green.withOpacity(0.5)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: green, width: 1.8),
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscure ? Icons.visibility_off : Icons.visibility,
-                        color: Colors.black54,
+                        color: subTextColor,
                       ),
-                      onPressed: () =>
-                          setState(() => _obscure = !_obscure),
+                      onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
                 ),
                 const SizedBox(height: 20),
 
-                // Continue button
+                //Continue button
                 SizedBox(
                   width: double.infinity,
                   height: 52,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _handleLogin,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
+                      backgroundColor: green,
+                      foregroundColor: ivory,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -117,7 +138,7 @@ class _LoginPageState extends State<LoginPage> {
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: ivory,
                             ),
                           )
                         : const Text(
@@ -131,91 +152,96 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Register option
+                //Register 
                 TextButton(
                   onPressed: () {
                     Navigator.pushNamed(context, '/register');
                   },
-                  child: const Text(
+                  child: Text(
                     'or Register',
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.black87,
+                      color: textColor,
                       decoration: TextDecoration.underline,
+                      decorationColor: textColor,
                     ),
                   ),
                 ),
                 const SizedBox(height: 12),
 
-                // Divider
+                //Divider
                 Row(
-                  children: const [
-                    Expanded(child: Divider(thickness: 1, color: Colors.black26)),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8.0),
-                      child: Text(
-                        'or',
-                        style: TextStyle(color: Colors.black54),
+                  children: [
+                    Expanded(
+                      child: Divider(
+                        thickness: 1,
+                        color: subTextColor.withOpacity(0.4),
                       ),
                     ),
-                    Expanded(child: Divider(thickness: 1, color: Colors.black26)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Text(
+                        'or',
+                        style: TextStyle(color: subTextColor),
+                      ),
+                    ),
+                    Expanded(
+                      child: Divider(
+                        thickness: 1,
+                        color: subTextColor.withOpacity(0.4),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
 
-                // Google login button
+                //Google login
                 SizedBox(
                   width: double.infinity,
                   height: 52,
                   child: OutlinedButton.icon(
-                    icon: Image.asset(
-                      'assets/images/google.png',
-                      height: 20,
-                    ),
-                    label: const Text(
+                    icon: Image.asset('assets/images/google.png', height: 20),
+                    label: Text(
                       'Continue with Google',
-                      style: TextStyle(color: Colors.black),
+                      style: TextStyle(color: textColor),
                     ),
                     onPressed: () {},
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.black26),
+                      side: BorderSide(color: subTextColor.withOpacity(0.4)),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      backgroundColor: Colors.white,
+                      backgroundColor: cardColor,
                     ),
                   ),
                 ),
                 const SizedBox(height: 10),
 
-                // Apple login button
+                //Apple login
                 SizedBox(
                   width: double.infinity,
                   height: 52,
                   child: OutlinedButton.icon(
-                    icon: Image.asset(
-                      'assets/images/apple.png',
-                      height: 20,
-                    ),
-                    label: const Text(
+                    icon: Image.asset('assets/images/apple.png', height: 20),
+                    label: Text(
                       'Continue with Apple',
-                      style: TextStyle(color: Colors.black),
+                      style: TextStyle(color: textColor),
                     ),
                     onPressed: () {},
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.black26),
+                      side: BorderSide(color: subTextColor.withOpacity(0.4)),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      backgroundColor: Colors.white,
+                      backgroundColor: cardColor,
                     ),
                   ),
                 ),
 
                 const SizedBox(height: 20),
-                const Text(
+                Text(
                   'By clicking continue, you agree to our Terms of Service and Privacy Policy.',
-                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                  style: TextStyle(fontSize: 12, color: subTextColor),
                   textAlign: TextAlign.center,
                 ),
               ],
