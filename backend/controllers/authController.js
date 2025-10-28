@@ -1,8 +1,18 @@
 import { getAuth } from "firebase-admin/auth";
+import admin from "firebase-admin";
+import { auth, db } from "../config/firebase.js";
 
-// 🧩 Sign-up Controller
 export const signupUser = async (req, res) => {
-  const { email, password, displayName } = req.body;
+  const {
+    email,
+    password,
+    displayName,
+    phoneNumber,
+    gender,
+    weight,
+    heightFt,
+    heightIn,
+  } = req.body;
 
   getAuth()
     .createUser({
@@ -10,10 +20,24 @@ export const signupUser = async (req, res) => {
       emailVerified: false,
       password: password,
       displayName: displayName,
+      phoneNumber: phoneNumber,
       disabled: false,
     })
-    .then((userRecord) => {
+    .then(async (userRecord) => {
       console.log("✅ Successfully created new user:", userRecord.uid);
+
+      // ✅ Create a Firestore user document with additional data
+      await db.collection("users").doc(userRecord.uid).set({
+        email,
+        displayName,
+        phoneNumber,
+        gender,
+        weight,
+        heightFt,
+        heightIn,
+        createdAt: new Date(),
+      });
+
       res.status(201).json({
         message: "User created successfully",
         uid: userRecord.uid,

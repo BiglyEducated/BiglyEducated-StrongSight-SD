@@ -2,6 +2,7 @@ import express from "express";
 import admin from "firebase-admin";
 import { readFileSync } from "fs";
 import authRoutes from "./routes/authRoutes.js";
+import { db } from "./config/firebase.js";
 
 const serviceAccount = JSON.parse(readFileSync("./serviceAccountKey.json", "utf8"));
 const app = express();
@@ -10,16 +11,7 @@ const PORT = process.env.PORT || 5000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Initialize Firebase Admin
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  projectId: serviceAccount.project_id,
-});
 
-// Firestore instance
-const db = admin.firestore();
-
-// ✅ Test connection route (keep it here)
 app.get("/test-firebase", async (req, res) => {
   try {
     const collections = await db.listCollections();
