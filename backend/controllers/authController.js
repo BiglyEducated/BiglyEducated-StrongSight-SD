@@ -37,3 +37,33 @@ export const logoutUser = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+/**
+ * Verify a Firebase ID token sent from the frontend.
+ * Expects header: Authorization: Bearer <token>
+ */
+export const verifyToken = async (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "No token provided" });
+  }
+
+  const idToken = authHeader.split(" ")[1];
+
+  try {
+    // ✅ Ask Firebase Admin SDK to verify and decode the token
+    const decodedToken = await getAuth().verifyIdToken(idToken);
+
+    // You can now access decodedToken.uid, decodedToken.email, etc.
+    return res.status(200).json({
+      message: "Token verified successfully",
+      uid: decodedToken.uid,
+      email: decodedToken.email,
+    });
+  } catch (error) {
+    console.error("Token verification failed:", error);
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+};
+
