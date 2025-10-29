@@ -91,3 +91,30 @@ export const verifyToken = async (req, res) => {
   }
 };
 
+/**
+ * DELETE /delete-user
+ * Deletes a user from Firebase Authentication
+ */
+export const deleteUser = async (req, res) => {
+  try {
+    // Get the token from headers (Authorization: Bearer <token>)
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing or invalid token" });
+    }
+
+    const idToken = authHeader.split("Bearer ")[1];
+    const decoded = await getAuth().verifyIdToken(idToken);
+
+    // Delete the user from Firebase Authentication
+    await getAuth().deleteUser(decoded.uid);
+
+    // Optionally: also remove from Firestore if you have a user profile there
+    await db.collection("users").doc(decoded.uid).delete();
+
+    return res.status(200).json({ message: `User ${decoded.uid} deleted successfully.` });
+  } catch (error) {
+    console.error("❌ Error deleting user:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};

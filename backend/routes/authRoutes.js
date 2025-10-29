@@ -1,5 +1,5 @@
 import express from "express";
-import { signupUser, verifyToken, logoutUser } from "../controllers/authController.js";
+import { signupUser, verifyToken, deleteUser } from "../controllers/authController.js";
 
 const router = express.Router();
 
@@ -8,6 +8,6 @@ router.post("/signup", signupUser);
 router.post("/verify-token", verifyToken); 
 
 // 🔹 Log out route (placeholder)
-router.post("/logout", logoutUser);
+router.post("/delete-user", deleteUser);
 
 export default router;
