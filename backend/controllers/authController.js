@@ -104,17 +104,54 @@ export const deleteUser = async (req, res) => {
     }
 
     const idToken = authHeader.split("Bearer ")[1];
-    const decoded = await getAuth().verifyIdToken(idToken);
+    const decodedToken = await getAuth().verifyIdToken(idToken);
 
     // Delete the user from Firebase Authentication
-    await getAuth().deleteUser(decoded.uid);
+    await getAuth().deleteUser(decodedToken.uid);
 
     // Optionally: also remove from Firestore if you have a user profile there
-    await db.collection("users").doc(decoded.uid).delete();
+    await db.collection("users").doc(decodedToken.uid).delete();
 
-    return res.status(200).json({ message: `User ${decoded.uid} deleted successfully.` });
+    return res.status(200).json({ message: `User ${decodedToken.uid} deleted successfully.` });
   } catch (error) {
     console.error("❌ Error deleting user:", error);
     return res.status(500).json({ error: error.message });
   }
 };
+
+/**
+ * GET USER INFO
+ * Fetches user information from Firebase 
+ */ 
+export const getUserInfo = async (req, res) => {
+  try {
+    // Extract token from header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing or invalid token" });
+    }
+
+    const idToken = authHeader.split("Bearer ")[1];
+
+    // Verify token and extract UID
+    const decodedToken = await getAuth().verifyIdToken(idToken);
+    const uid = decodedToken.uid;
+
+    // Fetch user info from Firestore
+    const userDoc = await db.collection("users").doc(uid).get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: "User not found in Firestore" });
+    }
+
+    //Return data
+    return res.status(200).json({
+      message: "User data fetched successfully",
+      data: userDoc.data(),
+    });
+  } catch (error) {
+    console.error("Error fetching user info:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
