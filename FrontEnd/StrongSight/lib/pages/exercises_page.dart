@@ -79,37 +79,40 @@ class _ExercisesPageState extends State<ExercisesPage> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
 
-    // 🎨 StrongSight colors
+    // --- StrongSight Colors ---
     const ivory = Color(0xFFF3EBD3);
-    const green = Color(0xFF094941);
     const espresso = Color(0xFF12110F);
+    const lightModeGreen = Color(0xFF094941);
+    const darkModeGreen = Color(0xFF039E39);
+    const darkCard = Color(0xFF1A1917);
 
     final bgColor = isDark ? espresso : const Color(0xFFFCF5E3);
-    final cardColor = isDark ? const Color(0xFF1A1917) : Colors.white;
-    final textColor = green;
-    final subTextColor = isDark ? const Color(0xFFD9CBB8) : Colors.grey;
-    final accentColor = green;
+    final cardColor = isDark ? darkCard : Colors.white;
+    final textColor = isDark ? darkModeGreen : lightModeGreen;
+    final subTextColor = isDark ? const Color(0xFFD9CBB8) : Colors.grey[700]!;
+    final accentColor = isDark ? darkModeGreen : lightModeGreen;
 
     return Scaffold(
       backgroundColor: bgColor,
 
-      // 🧩 Ivory header for light mode, cream for dark
+      // ---------- AppBar ----------
       appBar: AppBar(
-        backgroundColor: isDark ? ivory : ivory,
+        backgroundColor: ivory, // Always ivory
         title: const Text(
           'Exercises',
           style: TextStyle(
-            color: green,
+            color: lightModeGreen, // Always dark green for title
             fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
-        iconTheme: const IconThemeData(color: green),
+        iconTheme: const IconThemeData(color: lightModeGreen),
       ),
 
+      // ---------- Body ----------
       body: Column(
         children: [
-          // 🔍 Search bar
+          // --- Search Bar ---
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
@@ -121,7 +124,7 @@ class _ExercisesPageState extends State<ExercisesPage> {
                 hintStyle: TextStyle(color: subTextColor),
                 prefixIcon: Icon(Icons.search, color: accentColor),
                 filled: true,
-                fillColor: isDark ? const Color(0xFF1B1A18) : Colors.white,
+                fillColor: cardColor,
                 contentPadding: const EdgeInsets.symmetric(vertical: 14),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -138,7 +141,7 @@ class _ExercisesPageState extends State<ExercisesPage> {
             ),
           ),
 
-          // 🏋️ Exercise List
+          // --- Exercise List ---
           Expanded(
             child: _filteredExercises.isEmpty
                 ? Center(
@@ -174,7 +177,7 @@ class _ExercisesPageState extends State<ExercisesPage> {
                           ),
                           title: Row(
                             children: [
-                              // 🖼 Thumbnail
+                              // --- Thumbnail ---
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(10),
                                 child: Image.asset(
@@ -197,11 +200,21 @@ class _ExercisesPageState extends State<ExercisesPage> {
                               ),
                             ],
                           ),
-                          childrenPadding:
-                              const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          childrenPadding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 10),
                           children: [
-                            _buildInfoRow("Muscles Worked:", ex["muscles"], textColor, subTextColor),
-                            _buildInfoRow("Equipment:", ex["equipment"], textColor, subTextColor),
+                            _buildInfoRow(
+                              "Muscles Worked:",
+                              ex["muscles"],
+                              textColor,
+                              subTextColor,
+                            ),
+                            _buildInfoRow(
+                              "Equipment:",
+                              ex["equipment"],
+                              textColor,
+                              subTextColor,
+                            ),
                             const SizedBox(height: 8),
                             Text(
                               "Proper Form:",
@@ -216,9 +229,11 @@ class _ExercisesPageState extends State<ExercisesPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: (ex["form"] as List<String>).map((step) {
                                 return Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 2),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 2),
                                   child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         "• ",
@@ -232,7 +247,7 @@ class _ExercisesPageState extends State<ExercisesPage> {
                                         child: Text(
                                           step,
                                           style: TextStyle(
-                                            color: textColor.withOpacity(0.9),
+                                            color: subTextColor,
                                             fontSize: 15,
                                             height: 1.4,
                                           ),
@@ -255,7 +270,9 @@ class _ExercisesPageState extends State<ExercisesPage> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value, Color textColor, Color subTextColor) {
+  // ---------- Helper Info Row ----------
+  Widget _buildInfoRow(
+      String label, String value, Color textColor, Color subTextColor) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(

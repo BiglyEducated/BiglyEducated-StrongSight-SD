@@ -28,16 +28,18 @@ class _LoginPageState extends State<LoginPage> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
 
-    //StrongSight color palette
-    const green = Color(0xFF094941);
+    // --- StrongSight Color Palette ---
     const ivory = Color(0xFFF3EBD3);
-    const beige = Color(0xFFFCF5E3);
     const espresso = Color(0xFF12110F);
+    const lightModeGreen = Color(0xFF094941);
+    const darkModeGreen = Color(0xFF039E39);
+    const darkCard = Color(0xFF1A1917);
 
-    final bgColor = isDark ? espresso : beige;
-    final cardColor = isDark ? const Color(0xFF1A1917) : Colors.white;
-    final textColor = isDark ? ivory : green;
-    final subTextColor = isDark ? const Color(0xFFD9CBB8) : Colors.black54;
+    final bgColor = isDark ? espresso : const Color(0xFFFCF5E3);
+    final cardColor = isDark ? darkCard : Colors.white;
+    final textColor = isDark ? darkModeGreen : lightModeGreen;
+    final subTextColor = isDark ? const Color(0xFFD9CBB8) : Colors.grey[700]!;
+    final accentColor = isDark ? darkModeGreen : lightModeGreen;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -65,7 +67,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 30),
 
-                //Email 
+                // ---------- Email ----------
                 TextField(
                   controller: _emailController,
                   style: TextStyle(color: textColor),
@@ -78,17 +80,17 @@ class _LoginPageState extends State<LoginPage> {
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: green.withOpacity(0.5)),
+                      borderSide: BorderSide(color: accentColor.withOpacity(0.4)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: green, width: 1.8),
+                      borderSide: BorderSide(color: accentColor, width: 1.8),
                     ),
                   ),
                 ),
                 const SizedBox(height: 14),
 
-                //Password
+                // ---------- Password ----------
                 TextField(
                   controller: _passwordController,
                   obscureText: _obscure,
@@ -102,11 +104,11 @@ class _LoginPageState extends State<LoginPage> {
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: green.withOpacity(0.5)),
+                      borderSide: BorderSide(color: accentColor.withOpacity(0.4)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: green, width: 1.8),
+                      borderSide: BorderSide(color: accentColor, width: 1.8),
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -119,18 +121,22 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 20),
 
-                //Continue button
+                // ---------- Continue Button ----------
                 SizedBox(
                   width: double.infinity,
                   height: 52,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _handleLogin,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: green,
+                      backgroundColor: accentColor,
                       foregroundColor: ivory,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
+                      shadowColor: isDark
+                          ? Colors.transparent
+                          : Colors.black.withOpacity(0.15),
+                      elevation: isDark ? 0 : 3,
                     ),
                     child: _isLoading
                         ? const SizedBox(
@@ -152,11 +158,9 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 16),
 
-                //Register 
+                // ---------- Register Link ----------
                 TextButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/register');
-                  },
+                  onPressed: () => Navigator.pushNamed(context, '/register'),
                   child: Text(
                     'or Register',
                     style: TextStyle(
@@ -169,7 +173,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 12),
 
-                //Divider
+                // ---------- Divider ----------
                 Row(
                   children: [
                     Expanded(
@@ -195,7 +199,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 12),
 
-                //Google login
+                // ---------- Google Login ----------
                 SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -217,7 +221,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 10),
 
-                //Apple login
+                // ---------- Apple Login ----------
                 SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -237,8 +241,9 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 20),
+
+                // ---------- Terms ----------
                 Text(
                   'By clicking continue, you agree to our Terms of Service and Privacy Policy.',
                   style: TextStyle(fontSize: 12, color: subTextColor),

@@ -23,12 +23,17 @@ class _ProfilePageState extends State<ProfilePage> {
     const ivory = Color(0xFFF3EBD3);
     const green = Color(0xFF094941);
     const espresso = Color(0xFF12110F);
+    const darkModeGreen = Color(0xFF039E39); //lighter pastel green
+    const lightModeGreen = Color(0xFF094941); //darker deep green
+
 
     final bgColor = isDark ? espresso : const Color(0xFFFCF5E3);
     final cardColor = isDark ? const Color(0xFF1A1917) : Colors.white;
-    final textColor = green; //Green text
-    final subTextColor = isDark ? const Color(0xFFD9CBB8) : Colors.grey;
-    final accentColor = green;
+    
+    final textColor = isDark ? darkModeGreen : lightModeGreen;
+    final subTextColor = isDark ? const Color(0xFFD9CBB8) : Colors.grey[700]!;
+    final accentColor = isDark ? darkModeGreen : lightModeGreen;
+
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -57,7 +62,7 @@ class _ProfilePageState extends State<ProfilePage> {
               const SizedBox(height: 24),
               _buildSectionTitle("Settings", textColor),
               const SizedBox(height: 10),
-              _buildSettingsCard(themeProvider, cardColor, textColor, accentColor),
+              _buildSettingsCard(themeProvider, cardColor, textColor, accentColor, subTextColor),
               const SizedBox(height: 24),
               _buildSectionTitle("Progress & Improvements", textColor),
               const SizedBox(height: 10),
@@ -107,23 +112,23 @@ class _ProfilePageState extends State<ProfilePage> {
             style: TextStyle(color: subTextColor, fontSize: 15),
           ),
           const SizedBox(height: 10),
-          Divider(color: subTextColor.withOpacity(0.4)),
+          Divider(color: textColor.withOpacity(0.4)),
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: const [
-              _InfoTile(label: "Phone", value: "(407) 555-1234"),
-              _InfoTile(label: "Height", value: "5'10\""),
-              _InfoTile(label: "Weight", value: "160 lbs"),
+            children: [
+              _InfoTile(label: "Phone", value: "(407) 555-1234", labelColor: textColor, valueColor: subTextColor),
+              _InfoTile(label: "Height", value: "5'10\"", labelColor: textColor, valueColor: subTextColor),
+              _InfoTile(label: "Weight", value: "160 lbs", labelColor: textColor, valueColor: subTextColor),
             ],
           ),
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: const [
-              _InfoTile(label: "Age", value: "23"),
-              _InfoTile(label: "Goal", value: "Muscle Gain"),
-              _InfoTile(label: "Joined", value: "Feb 2025"),
+            children: [
+              _InfoTile(label: "Age", value: "23", labelColor: textColor, valueColor: subTextColor),
+              _InfoTile(label: "Goal", value: "Muscle Gain", labelColor: textColor, valueColor: subTextColor),
+              _InfoTile(label: "Joined", value: "Feb 2025", labelColor: textColor, valueColor: subTextColor),
             ],
           ),
         ],
@@ -132,7 +137,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   // ---------- SETTINGS ----------
-  Widget _buildSettingsCard(ThemeProvider themeProvider, Color cardColor, Color textColor, Color accentColor) {
+  Widget _buildSettingsCard(ThemeProvider themeProvider, Color cardColor, Color textColor, Color accentColor, Color subTextColor) {
     return Container(
       decoration: BoxDecoration(
         color: cardColor,
@@ -149,20 +154,20 @@ class _ProfilePageState extends State<ProfilePage> {
         children: [
           SwitchListTile(
             activeColor: accentColor,
-            title: Text("Notifications", style: TextStyle(color: textColor)),
+            title: Text("Notifications", style: TextStyle(color: subTextColor)),
             value: _notificationsEnabled,
             onChanged: (val) => setState(() => _notificationsEnabled = val),
           ),
           Divider(color: Colors.grey.withOpacity(0.3), height: 0),
           SwitchListTile(
             activeColor: accentColor,
-            title: Text("App Sounds", style: TextStyle(color: textColor)),
+            title: Text("App Sounds", style: TextStyle(color: subTextColor)),
             value: _soundEnabled,
             onChanged: (val) => setState(() => _soundEnabled = val),
           ),
           Divider(color: Colors.grey.withOpacity(0.3), height: 0),
           SwitchListTile(
-            title: Text("Dark Mode", style: TextStyle(color: textColor)),
+            title: Text("Dark Mode", style: TextStyle(color: subTextColor)),
             activeColor: accentColor,
             value: themeProvider.isDarkMode,
             onChanged: (value) => themeProvider.toggleTheme(value),
@@ -205,33 +210,37 @@ class _ProfilePageState extends State<ProfilePage> {
             label: "Bench Press",
             current: 205,
             goal: 225,
-            color: accentColor,
+            color: textColor,  //Progress bars fill color
             subTextColor: subTextColor,
+            textColor: subTextColor, //Color for "Bench Press"
           ),
           const SizedBox(height: 14),
           _ProgressBar(
             label: "Squat",
             current: 275,
             goal: 315,
-            color: accentColor.withOpacity(0.8),
+            color: textColor,
             subTextColor: subTextColor,
+            textColor: subTextColor,
           ),
           const SizedBox(height: 14),
           _ProgressBar(
             label: "Deadlift",
             current: 315,
             goal: 365,
-            color: accentColor.withOpacity(0.8),
+            color: textColor,
             subTextColor: subTextColor,
+            textColor: subTextColor,
           ),
           const SizedBox(height: 14),
           _ProgressBar(
             label: "Body Fat % Reduction",
             current: 18,
             goal: 12,
-            color: accentColor,
+            color: textColor,
             isPercentage: true,
             subTextColor: subTextColor,
+            textColor: subTextColor, 
           ),
         ],
       ),
@@ -243,21 +252,23 @@ class _ProfilePageState extends State<ProfilePage> {
 class _InfoTile extends StatelessWidget {
   final String label;
   final String value;
+  final Color labelColor;
+  final Color valueColor;
 
-  const _InfoTile({required this.label, required this.value});
+  const _InfoTile({required this.label, required this.value, required this.labelColor, required this.valueColor});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, color: Color(0xFF748067))),
+        Text(label, style: TextStyle(fontSize: 14, color: labelColor)),
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF094941), //green
+            color: valueColor, //green
           ),
         ),
       ],
@@ -273,14 +284,17 @@ class _ProgressBar extends StatelessWidget {
   final Color color;
   final bool isPercentage;
   final Color subTextColor;
+  final Color textColor;
 
   const _ProgressBar({
     required this.label,
     required this.current,
     required this.goal,
     required this.color,
+    required this.textColor,
     required this.subTextColor,
     this.isPercentage = false,
+
   });
 
   @override
@@ -293,11 +307,11 @@ class _ProgressBar extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF094941), //green text
-          ),
+          style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
         ),
         const SizedBox(height: 6),
         ClipRRect(

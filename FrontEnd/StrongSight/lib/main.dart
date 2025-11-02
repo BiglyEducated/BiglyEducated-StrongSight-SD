@@ -69,8 +69,8 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         brightness: Brightness.dark,
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF094941), // 🌿 Logo green
-          secondary: Color(0xFF748067), // subtle muted olive
+          primary: Color(0xFF094941), //Logo green
+          secondary: Color(0xFF748067), //subtle muted olive
         ),
         scaffoldBackgroundColor: const Color(0xFF0B0F14),
         appBarTheme: const AppBarTheme(
@@ -78,11 +78,11 @@ class MyApp extends StatelessWidget {
           elevation: 0,
           centerTitle: true,
           titleTextStyle: TextStyle(
-            color: Color(0xFF094941), // 🌿 green text instead of white
+            color: Color(0xFF039E39), //green text
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
-          iconTheme: IconThemeData(color: Color(0xFF094941)), // 🌿
+          iconTheme: IconThemeData(color: Color(0xFF094941)), 
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
@@ -95,7 +95,7 @@ class MyApp extends StatelessWidget {
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF094941), // 🌿 Green button
+            backgroundColor: const Color(0xFF039E39), // Green button
             foregroundColor: const Color(0xFFFCF5E3), // cream text
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
             textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
@@ -103,7 +103,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
         floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: Color(0xFF094941),
+          backgroundColor: Color(0xFF039E39),
           foregroundColor: Color(0xFFFCF5E3),
         ),
         cardColor: const Color(0xFF10161B),

@@ -35,35 +35,38 @@ class _WorkoutPageState extends State<WorkoutPage> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
 
-    //StrongSight palette
+    // --- StrongSight Colors ---
     const ivory = Color(0xFFF3EBD3);
-    const green = Color(0xFF094941);
     const espresso = Color(0xFF12110F);
+    const lightModeGreen = Color(0xFF094941);
+    const darkModeGreen = Color(0xFF039E39);
+    const darkCard = Color(0xFF1A1917);
 
     final bgColor = isDark ? espresso : const Color(0xFFFCF5E3);
-    final cardColor = isDark ? const Color(0xFF1A1917) : Colors.white;
-    final textColor = green;
-    final subTextColor = isDark ? const Color(0xFFD9CBB8) : Colors.black87;
-    final accentColor = green;
-    final borderColor = green;
+    final cardColor = isDark ? darkCard : Colors.white;
+    final textColor = isDark ? darkModeGreen : lightModeGreen;
+    final subTextColor = isDark ? const Color(0xFFD9CBB8) : Colors.grey[700]!;
+    final accentColor = isDark ? darkModeGreen : lightModeGreen;
+    final borderColor = isDark ? darkModeGreen : lightModeGreen;
 
     return Scaffold(
       backgroundColor: bgColor,
 
-      //Ivory header with green text/icons
+      // ---------- App Bar ----------
       appBar: AppBar(
-        backgroundColor: ivory,
+        backgroundColor: ivory, // Always ivory
         title: const Text(
           "Start Workout",
           style: TextStyle(
-            color: green,
+            color: lightModeGreen, // Always dark green
             fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
-        iconTheme: const IconThemeData(color: green),
+        iconTheme: const IconThemeData(color: lightModeGreen), // Always dark green icons
       ),
 
+      // ---------- Body ----------
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -78,6 +81,8 @@ class _WorkoutPageState extends State<WorkoutPage> {
               ),
             ),
             const SizedBox(height: 12),
+
+            // --- Dropdown Menu ---
             DropdownButtonFormField<String>(
               value: _selectedExercise,
               hint: Text(
@@ -114,6 +119,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
             ),
             const SizedBox(height: 24),
 
+            // --- Conditional Exercise Demo ---
             if (_selectedExercise != null) ...[
               _buildExerciseDemo(
                 _selectedExercise!,
@@ -124,6 +130,8 @@ class _WorkoutPageState extends State<WorkoutPage> {
                 borderColor,
               ),
               const SizedBox(height: 30),
+
+              // --- Start Recording Button ---
               Center(
                 child: ElevatedButton.icon(
                   onPressed: _startRecording,
@@ -150,6 +158,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
     );
   }
 
+  // ---------- Exercise Demo Card ----------
   Widget _buildExerciseDemo(
     String exercise,
     bool isDark,
@@ -200,7 +209,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                 "🎥 Video Demonstration Here (Coming Soon)",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: textColor,
+                  color: subTextColor,
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                 ),

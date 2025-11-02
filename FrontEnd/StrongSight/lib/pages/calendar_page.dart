@@ -29,41 +29,44 @@ class _CalendarPageState extends State<CalendarPage> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
 
-    // 🎨 StrongSight Colors
+    // --- StrongSight Colors ---
     const ivory = Color(0xFFF3EBD3);
-    const green = Color(0xFF094941);
     const espresso = Color(0xFF12110F);
+    const lightModeGreen = Color(0xFF094941);
+    const darkModeGreen = Color(0xFF039E39);
+    const darkCard = Color(0xFF1A1917);
 
     final bgColor = isDark ? espresso : const Color(0xFFFCF5E3);
-    final cardColor = isDark ? const Color(0xFF1A1917) : Colors.white;
-    final textColor = green;
-    final accentColor = green;
-    final subTextColor = isDark ? const Color(0xFFD9CBB8) : Colors.grey;
+    final cardColor = isDark ? darkCard : Colors.white;
+    final textColor = isDark ? darkModeGreen : lightModeGreen;
+    final subTextColor = isDark ? const Color(0xFFD9CBB8) : Colors.grey[700]!;
+    final accentColor = isDark ? darkModeGreen : lightModeGreen;
 
     return Scaffold(
       backgroundColor: bgColor,
 
-      // 🧩 Ivory header with green text
+      // ---------- App Bar ----------
       appBar: AppBar(
-        backgroundColor: ivory,
+        backgroundColor: ivory, // Always ivory
         title: const Text(
           'Workout Calendar',
           style: TextStyle(
-            color: green,
+            color: lightModeGreen, // Always dark green for the title
             fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
-        iconTheme: const IconThemeData(color: green),
+        iconTheme: const IconThemeData(color: lightModeGreen),
       ),
 
+      // ---------- Body ----------
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.only(bottom: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 🗓 Calendar container
+              // --- Calendar Container ---
               Container(
                 margin: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -84,8 +87,27 @@ class _CalendarPageState extends State<CalendarPage> {
                   focusedDay: _focusedDay,
                   selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
                   eventLoader: _getEventsForDay,
+                  headerStyle: HeaderStyle(
+                    formatButtonVisible: false,
+                    titleCentered: true,
+                    titleTextStyle: TextStyle(
+                      color: textColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                    leftChevronIcon:
+                        Icon(Icons.chevron_left, color: textColor),
+                    rightChevronIcon:
+                        Icon(Icons.chevron_right, color: textColor),
+                  ),
+                  daysOfWeekStyle: DaysOfWeekStyle(
+                    weekdayStyle: TextStyle(color: subTextColor),
+                    weekendStyle: TextStyle(color: subTextColor),
+                  ),
                   calendarStyle: CalendarStyle(
                     outsideDaysVisible: false,
+                    defaultTextStyle: TextStyle(color: textColor),
+                    weekendTextStyle: TextStyle(color: textColor),
                     todayDecoration: BoxDecoration(
                       color: accentColor.withOpacity(0.3),
                       shape: BoxShape.circle,
@@ -94,20 +116,11 @@ class _CalendarPageState extends State<CalendarPage> {
                       color: accentColor,
                       shape: BoxShape.circle,
                     ),
-                    defaultTextStyle: const TextStyle(color: green),
-                    weekendTextStyle:
-                        TextStyle(color: green.withOpacity(0.85)),
-                  ),
-                  headerStyle: const HeaderStyle(
-                    formatButtonVisible: false,
-                    titleCentered: true,
-                    titleTextStyle: TextStyle(
-                      color: green,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
+                    markerDecoration: BoxDecoration(
+                      color: accentColor.withOpacity(0.8),
+                      shape: BoxShape.circle,
                     ),
-                    leftChevronIcon: Icon(Icons.chevron_left, color: green),
-                    rightChevronIcon: Icon(Icons.chevron_right, color: green),
+                    todayTextStyle: TextStyle(color: textColor),
                   ),
                   onDaySelected: (selectedDay, focusedDay) {
                     setState(() {
@@ -118,7 +131,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 ),
               ),
 
-              // 📋 Event list
+              // --- Event List Section ---
               Container(
                 padding: const EdgeInsets.all(16),
                 width: double.infinity,
@@ -141,7 +154,7 @@ class _CalendarPageState extends State<CalendarPage> {
                     const Text(
                       "Your Workouts",
                       style: TextStyle(
-                        color: green,
+                        color: lightModeGreen, // Fixed dark green header
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -153,7 +166,10 @@ class _CalendarPageState extends State<CalendarPage> {
                               padding: const EdgeInsets.all(16.0),
                               child: Text(
                                 "No workouts logged for this day.",
-                                style: TextStyle(color: subTextColor, fontSize: 16),
+                                style: TextStyle(
+                                  color: subTextColor,
+                                  fontSize: 16,
+                                ),
                               ),
                             ),
                           )
@@ -162,14 +178,15 @@ class _CalendarPageState extends State<CalendarPage> {
                                 _getEventsForDay(_selectedDay ?? _focusedDay)
                                     .map(
                                       (event) => Container(
-                                        margin:
-                                            const EdgeInsets.symmetric(vertical: 6),
+                                        margin: const EdgeInsets.symmetric(
+                                            vertical: 6),
                                         padding: const EdgeInsets.all(14),
                                         decoration: BoxDecoration(
                                           color: isDark
                                               ? espresso
                                               : const Color(0xFFFCF5E3),
-                                          borderRadius: BorderRadius.circular(10),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
                                           border: Border.all(
                                             color: accentColor,
                                             width: 1.2,
@@ -181,14 +198,14 @@ class _CalendarPageState extends State<CalendarPage> {
                                           children: [
                                             Text(
                                               event,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.w600,
-                                                color: green,
+                                                color: textColor,
                                               ),
                                             ),
-                                            const Icon(Icons.check_circle_outline,
-                                                color: green),
+                                            Icon(Icons.check_circle_outline,
+                                                color: accentColor),
                                           ],
                                         ),
                                       ),
