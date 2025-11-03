@@ -9,21 +9,64 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
   final String userName = "Yoendry";
   final String profileImagePath = "assets/images/profile_placeholder.png";
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  bool _isDrawerOpen = false;
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
+  }
+
+  void _toggleDrawer() {
+    if (_isDrawerOpen) {
+      Navigator.of(context).pop();
+    } else {
+      _scaffoldKey.currentState!.openEndDrawer();
+    }
+  }
+
+  void _onDrawerChanged(bool isOpen) {
+    setState(() {
+      _isDrawerOpen = isOpen;
+      if (isOpen) {
+        _fadeController.forward();
+      } else {
+        _fadeController.reverse();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
 
-    // --- StrongSight colors ---
+    // --- StrongSight Colors ---
     const ivory = Color(0xFFF3EBD3);
     const green = Color(0xFF094941);
     const espresso = Color(0xFF12110F);
-    const darkModeGreen = Color(0xFF039E39); // light pastel green
-    const lightModeGreen = Color(0xFF094941); // deep dark green
+    const darkModeGreen = Color(0xFF039E39);
+    const lightModeGreen = Color(0xFF094941);
 
     final bgColor = isDark ? espresso : const Color(0xFFFCF5E3);
     final cardColor = isDark ? const Color(0xFF1A1917) : Colors.white;
@@ -32,125 +75,143 @@ class _HomePageState extends State<HomePage> {
     final accentColor = isDark ? darkModeGreen : lightModeGreen;
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: bgColor,
       endDrawerEnableOpenDragGesture: true,
+      onEndDrawerChanged: _onDrawerChanged,
 
       // ---------- Sidebar Drawer ----------
       endDrawer: Drawer(
+        elevation: 16,
         backgroundColor: cardColor,
-        child: GestureDetector(
-          onHorizontalDragUpdate: (details) {
-            if (details.primaryDelta! > 15) {
-              Navigator.of(context).pop();
-            }
-          },
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: CircleAvatar(
                     radius: 50,
                     backgroundImage: AssetImage(profileImagePath),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    userName,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: primaryTextColor,
-                    ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  userName,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: primaryTextColor,
                   ),
-                  const SizedBox(height: 8),
-                  Text("Email: yoendry@example.com",
-                      style: TextStyle(color: subTextColor)),
-                  Text("Phone: (407) 555-1234",
-                      style: TextStyle(color: subTextColor)),
-                  Text("Weight: 160 lbs",
-                      style: TextStyle(color: subTextColor)),
-                  Text("Height: 5'10\"",
-                      style: TextStyle(color: subTextColor)),
-                  const SizedBox(height: 20),
-                  Divider(color: subTextColor.withOpacity(0.4)),
-                  ListTile(
-                    leading: const Icon(Icons.logout, color: Colors.redAccent),
-                    title:
-                        Text("Log Out", style: TextStyle(color: subTextColor)),
-                    onTap: () => Navigator.pushReplacementNamed(context, '/'),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                Text("Email: yoendry@example.com",
+                    style: TextStyle(color: subTextColor)),
+                Text("Phone: (407) 555-1234",
+                    style: TextStyle(color: subTextColor)),
+                Text("Weight: 160 lbs",
+                    style: TextStyle(color: subTextColor)),
+                Text("Height: 5'10\"",
+                    style: TextStyle(color: subTextColor)),
+                const SizedBox(height: 20),
+                Divider(color: subTextColor.withOpacity(0.4)),
+                ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.redAccent),
+                  title:
+                      Text("Log Out", style: TextStyle(color: subTextColor)),
+                  onTap: () => Navigator.pushReplacementNamed(context, '/'),
+                ),
+              ],
             ),
           ),
         ),
       ),
 
-      // ---------- Page Content ----------
-      body: Column(
+      // ---------- Main Body ----------
+      body: Stack(
         children: [
-          // ---------- Header ----------
-          Container(
-            color: ivory,
-            padding: const EdgeInsets.fromLTRB(20, 50, 20, 30),
-            width: double.infinity,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          Column(
+            children: [
+              // ---------- Header ----------
+              Container(
+                color: ivory,
+                padding: const EdgeInsets.fromLTRB(20, 50, 20, 30),
+                width: double.infinity,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      "Welcome back,",
-                      style: TextStyle(
-                        color: green.withOpacity(0.8),
-                        fontSize: 16,
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Welcome back,",
+                          style: TextStyle(
+                            color: green.withOpacity(0.8),
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          userName,
+                          style: const TextStyle(
+                            color: green,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      userName,
-                      style: const TextStyle(
-                        color: green,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                    GestureDetector(
+                      onTap: _toggleDrawer,
+                      child: CircleAvatar(
+                        radius: 28,
+                        backgroundColor: accentColor,
+                        backgroundImage: AssetImage(profileImagePath),
                       ),
                     ),
                   ],
                 ),
-                Builder(
-                  builder: (context) => GestureDetector(
-                    onTap: () => Scaffold.of(context).openEndDrawer(),
-                    child: CircleAvatar(
-                      radius: 28,
-                      backgroundColor: accentColor,
-                      backgroundImage: AssetImage(profileImagePath),
-                    ),
+              ),
+
+              // ---------- Scrollable Content ----------
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildFitnessScoreCard(
+                          cardColor, primaryTextColor, subTextColor, accentColor),
+                      const SizedBox(height: 20),
+                      _buildSectionTitle("Recent Workouts", primaryTextColor),
+                      _buildWorkoutList(
+                          cardColor, primaryTextColor, subTextColor, accentColor),
+                      const SizedBox(height: 20),
+                      _buildSectionTitle(
+                          "Metrics & Improvements", primaryTextColor),
+                      _buildMetricsRow(
+                          cardColor, primaryTextColor, subTextColor, accentColor),
+                      const SizedBox(height: 20),
+                      _buildSectionTitle(
+                          "Personal Records (PR Tracker)", primaryTextColor),
+                      _buildPRTracker(
+                          cardColor, primaryTextColor, subTextColor, accentColor),
+                      const SizedBox(height: 80),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
 
-          // ---------- Scrollable Content ----------
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildFitnessScoreCard(cardColor, primaryTextColor, subTextColor, accentColor),
-                  const SizedBox(height: 20),
-                  _buildSectionTitle("Recent Workouts", primaryTextColor),
-                  _buildWorkoutList(cardColor, primaryTextColor, subTextColor, accentColor),
-                  const SizedBox(height: 20),
-                  _buildSectionTitle("Metrics & Improvements", primaryTextColor),
-                  _buildMetricsRow(cardColor, primaryTextColor, subTextColor, accentColor),
-                  const SizedBox(height: 20),
-                  _buildSectionTitle("Personal Records (PR Tracker)", primaryTextColor),
-                  _buildPRTracker(cardColor, primaryTextColor, subTextColor, accentColor),
-                  const SizedBox(height: 80),
-                ],
+          // ---------- Fade Overlay Behind Drawer ----------
+          IgnorePointer(
+            ignoring: !_isDrawerOpen,
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: Container(
+                color: Colors.black.withOpacity(0.5), // only darkens background
               ),
             ),
           ),
@@ -160,8 +221,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ---------- COMPONENTS ----------
-
-  Widget _buildFitnessScoreCard(Color cardColor, Color textColor, Color subTextColor, Color accentColor) {
+  Widget _buildFitnessScoreCard(
+      Color cardColor, Color textColor, Color subTextColor, Color accentColor) {
     return Container(
       decoration: BoxDecoration(
         color: cardColor,
@@ -211,7 +272,7 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 8),
           Text(
-            "Good Progress! Keep training 💪",
+            "Good Progress! Keep training",
             style: TextStyle(
               color: subTextColor,
               fontSize: 14,
@@ -233,7 +294,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-    Widget _buildWorkoutList(Color cardColor, Color textColor, Color subTextColor, Color accentColor) {
+  Widget _buildWorkoutList(Color cardColor, Color textColor,
+      Color subTextColor, Color accentColor) {
     final workouts = [
       {"title": "Push Day", "date": "Oct 9", "duration": "1h 10m"},
       {"title": "Leg Day", "date": "Oct 8", "duration": "1h 25m"},
@@ -259,13 +321,12 @@ class _HomePageState extends State<HomePage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Workout Title → now uses subTextColor instead of textColor
               Text(
                 w["title"]!,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: subTextColor, // changed from textColor ✅
+                  color: subTextColor,
                 ),
               ),
               Column(
@@ -273,7 +334,8 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   Text(
                     w["date"]!,
-                    style: TextStyle(color: subTextColor.withOpacity(0.9), fontSize: 14),
+                    style: TextStyle(
+                        color: subTextColor.withOpacity(0.9), fontSize: 14),
                   ),
                   Text(
                     w["duration"]!,
@@ -291,7 +353,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildMetricsRow(Color cardColor, Color textColor, Color subTextColor, Color accentColor) {
+  Widget _buildMetricsRow(Color cardColor, Color textColor,
+      Color subTextColor, Color accentColor) {
     final metrics = [
       {"title": "Volume", "value": "12,400 lbs"},
       {"title": "Duration", "value": "5h 30m"},
@@ -318,14 +381,15 @@ class _HomePageState extends State<HomePage> {
             ),
             child: Column(
               children: [
-                Text(m["title"]!, style: TextStyle(fontWeight: FontWeight.w500, color: subTextColor)),
+                Text(m["title"]!,
+                    style: TextStyle(
+                        fontWeight: FontWeight.w500, color: subTextColor)),
                 const SizedBox(height: 8),
                 Text(m["value"]!,
                     style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: accentColor,
-                    )),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: accentColor)),
               ],
             ),
           ),
@@ -334,7 +398,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildPRTracker(Color cardColor, Color textColor, Color subTextColor, Color accentColor) {
+  Widget _buildPRTracker(Color cardColor, Color textColor,
+      Color subTextColor, Color accentColor) {
     final prs = [
       {"lift": "Bench Press", "weight": "205 lbs"},
       {"lift": "Squat", "weight": "275 lbs"},
@@ -361,9 +426,15 @@ class _HomePageState extends State<HomePage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(p["lift"]!,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: subTextColor)),
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: subTextColor)),
               Text(p["weight"]!,
-                  style: TextStyle(fontSize: 16, color: accentColor, fontWeight: FontWeight.w700)),
+                  style: TextStyle(
+                      fontSize: 16,
+                      color: accentColor,
+                      fontWeight: FontWeight.w700)),
             ],
           ),
         );

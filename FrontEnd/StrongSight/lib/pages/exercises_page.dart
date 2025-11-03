@@ -97,11 +97,11 @@ class _ExercisesPageState extends State<ExercisesPage> {
 
       // ---------- AppBar ----------
       appBar: AppBar(
-        backgroundColor: ivory, // Always ivory
+        backgroundColor: ivory,
         title: const Text(
           'Exercises',
           style: TextStyle(
-            color: lightModeGreen, // Always dark green for title
+            color: lightModeGreen,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -177,14 +177,27 @@ class _ExercisesPageState extends State<ExercisesPage> {
                           ),
                           title: Row(
                             children: [
-                              // --- Thumbnail ---
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
+                              // --- Uniform Thumbnail Container ---
+                              Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? espresso
+                                      : const Color(0xFFEDE6D1),
+                                  borderRadius: BorderRadius.circular(10),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                padding: const EdgeInsets.all(6),
                                 child: Image.asset(
                                   ex["image"],
-                                  width: 60,
-                                  height: 60,
-                                  fit: BoxFit.cover,
+                                  fit: BoxFit.contain,
                                 ),
                               ),
                               const SizedBox(width: 14),
