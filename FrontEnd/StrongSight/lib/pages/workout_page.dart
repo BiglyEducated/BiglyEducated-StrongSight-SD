@@ -12,6 +12,7 @@ class WorkoutPage extends StatefulWidget {
 class _WorkoutPageState extends State<WorkoutPage> {
   String? _selectedExercise;
   bool _isRecording = false;
+  final ScrollController _scrollController = ScrollController();
 
   final List<String> _exerciseList = [
     "Squat",
@@ -20,7 +21,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
     "Bicep Curls",
   ];
 
-  void _startRecording() async {
+  void _startRecording() {
     setState(() {
       _isRecording = true;
     });
@@ -28,6 +29,24 @@ class _WorkoutPageState extends State<WorkoutPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Camera starting... (placeholder)")),
     );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _resetScrollPosition() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   @override
@@ -54,20 +73,22 @@ class _WorkoutPageState extends State<WorkoutPage> {
 
       // ---------- App Bar ----------
       appBar: AppBar(
-        backgroundColor: ivory, // Always ivory
+        backgroundColor: ivory,
         title: const Text(
           "Start Workout",
           style: TextStyle(
-            color: lightModeGreen, // Always dark green
+            color: lightModeGreen,
             fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
-        iconTheme: const IconThemeData(color: lightModeGreen), // Always dark green icons
+        iconTheme: const IconThemeData(color: lightModeGreen),
       ),
 
       // ---------- Body ----------
-      body: Padding(
+      body: SingleChildScrollView(
+        controller: _scrollController,
+        physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -115,6 +136,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                   _selectedExercise = value;
                   _isRecording = false;
                 });
+                _resetScrollPosition(); // scroll back to top on change
               },
             ),
             const SizedBox(height: 24),
@@ -151,6 +173,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                   ),
                 ),
               ),
+              const SizedBox(height: 40),
             ],
           ],
         ),

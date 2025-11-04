@@ -50,7 +50,25 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset('assets/images/logo.png', height: 120),
+                // ---------- Logo with circular backdrop ----------
+                Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isDark
+                        ? const Color(0xFFF3EBD3) // subtle contrast on dark mode
+                        : const Color(0xFFF3EBD3), // matches ivory background
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+
                 const SizedBox(height: 24),
                 Text(
                   'StrongSight',
@@ -80,11 +98,13 @@ class _LoginPageState extends State<LoginPage> {
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: accentColor.withOpacity(0.4)),
+                      borderSide:
+                          BorderSide(color: accentColor.withOpacity(0.4)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: accentColor, width: 1.8),
+                      borderSide:
+                          BorderSide(color: accentColor, width: 1.8),
                     ),
                   ),
                 ),
@@ -104,18 +124,21 @@ class _LoginPageState extends State<LoginPage> {
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: accentColor.withOpacity(0.4)),
+                      borderSide:
+                          BorderSide(color: accentColor.withOpacity(0.4)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: accentColor, width: 1.8),
+                      borderSide:
+                          BorderSide(color: accentColor, width: 1.8),
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscure ? Icons.visibility_off : Icons.visibility,
                         color: subTextColor,
                       ),
-                      onPressed: () => setState(() => _obscure = !_obscure),
+                      onPressed: () =>
+                          setState(() => _obscure = !_obscure),
                     ),
                   ),
                 ),
@@ -160,7 +183,8 @@ class _LoginPageState extends State<LoginPage> {
 
                 // ---------- Register Link ----------
                 TextButton(
-                  onPressed: () => Navigator.pushNamed(context, '/register'),
+                  onPressed: () =>
+                      Navigator.pushNamed(context, '/register'),
                   child: Text(
                     'or Register',
                     style: TextStyle(
@@ -183,7 +207,8 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8.0),
                       child: Text(
                         'or',
                         style: TextStyle(color: subTextColor),
@@ -204,14 +229,16 @@ class _LoginPageState extends State<LoginPage> {
                   width: double.infinity,
                   height: 52,
                   child: OutlinedButton.icon(
-                    icon: Image.asset('assets/images/google.png', height: 20),
+                    icon:
+                        Image.asset('assets/images/google.png', height: 20),
                     label: Text(
                       'Continue with Google',
                       style: TextStyle(color: textColor),
                     ),
                     onPressed: () {},
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: subTextColor.withOpacity(0.4)),
+                      side: BorderSide(
+                          color: subTextColor.withOpacity(0.4)),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -226,14 +253,16 @@ class _LoginPageState extends State<LoginPage> {
                   width: double.infinity,
                   height: 52,
                   child: OutlinedButton.icon(
-                    icon: Image.asset('assets/images/apple.png', height: 20),
+                    icon:
+                        Image.asset('assets/images/apple.png', height: 20),
                     label: Text(
                       'Continue with Apple',
                       style: TextStyle(color: textColor),
                     ),
                     onPressed: () {},
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: subTextColor.withOpacity(0.4)),
+                      side: BorderSide(
+                          color: subTextColor.withOpacity(0.4)),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),

@@ -12,6 +12,7 @@ class ExercisesPage extends StatefulWidget {
 class _ExercisesPageState extends State<ExercisesPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
+  Set<String> _selectedMuscles = {};
 
   final List<Map<String, dynamic>> _exercises = [
     {
@@ -54,7 +55,7 @@ class _ExercisesPageState extends State<ExercisesPage> {
     {
       "name": "Bicep Curls",
       "image": "assets/images/BicepCurl.png",
-      "muscles": "Biceps Brachii, Forearms",
+      "muscles": "Biceps, Forearms",
       "equipment": "Dumbbells or Barbell",
       "form": [
         "Stand tall with arms fully extended and elbows close to torso.",
@@ -65,12 +66,34 @@ class _ExercisesPageState extends State<ExercisesPage> {
     },
   ];
 
+  List<String> get _muscleGroups {
+  final muscles = _exercises
+      .expand((e) => (e["muscles"] as String)
+          .split(",")
+          .map((m) => m.trim()))
+      .toSet()
+      .toList()
+      .cast<String>(); // ensures List<String>
+
+  muscles.sort();
+  return muscles;
+}
+
+
   List<Map<String, dynamic>> get _filteredExercises {
-    if (_searchQuery.isEmpty) return _exercises;
     final query = _searchQuery.toLowerCase();
     return _exercises.where((ex) {
-      return ex["name"].toLowerCase().contains(query) ||
+      final matchesSearch = query.isEmpty ||
+          ex["name"].toLowerCase().contains(query) ||
           ex["muscles"].toLowerCase().contains(query);
+
+      if (_selectedMuscles.isEmpty) return matchesSearch;
+
+      final muscleList =
+          ex["muscles"].toLowerCase().split(",").map((m) => m.trim()).toList();
+      final matchesMuscles = _selectedMuscles.any((m) => muscleList.contains(m.toLowerCase()));
+
+      return matchesSearch && matchesMuscles;
     }).toList();
   }
 
@@ -94,8 +117,6 @@ class _ExercisesPageState extends State<ExercisesPage> {
 
     return Scaffold(
       backgroundColor: bgColor,
-
-      // ---------- AppBar ----------
       appBar: AppBar(
         backgroundColor: ivory,
         title: const Text(
@@ -108,13 +129,11 @@ class _ExercisesPageState extends State<ExercisesPage> {
         centerTitle: true,
         iconTheme: const IconThemeData(color: lightModeGreen),
       ),
-
-      // ---------- Body ----------
       body: Column(
         children: [
           // --- Search Bar ---
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: TextField(
               controller: _searchController,
               onChanged: (value) => setState(() => _searchQuery = value),
@@ -128,10 +147,7 @@ class _ExercisesPageState extends State<ExercisesPage> {
                 contentPadding: const EdgeInsets.symmetric(vertical: 14),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(
-                    color: accentColor.withOpacity(0.6),
-                    width: 1,
-                  ),
+                  borderSide: BorderSide(color: accentColor.withOpacity(0.6), width: 1),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -141,14 +157,52 @@ class _ExercisesPageState extends State<ExercisesPage> {
             ),
           ),
 
+          // --- Muscle Filter Chips ---
+          Container(
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            height: 50,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: _muscleGroups.map((muscle) {
+                final isSelected = _selectedMuscles.contains(muscle);
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    label: Text(muscle,
+                        style: TextStyle(
+                            color: isSelected ? Colors.white : textColor,
+                            fontWeight: FontWeight.w500)),
+                    selected: isSelected,
+                    backgroundColor: cardColor,
+                    selectedColor: accentColor,
+                    checkmarkColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: accentColor.withOpacity(0.6)),
+                    ),
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          _selectedMuscles.add(muscle);
+                        } else {
+                          _selectedMuscles.remove(muscle);
+                        }
+                      });
+                    },
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 12),
+
           // --- Exercise List ---
           Expanded(
             child: _filteredExercises.isEmpty
                 ? Center(
-                    child: Text(
-                      "No exercises found.",
-                      style: TextStyle(color: subTextColor, fontSize: 16),
-                    ),
+                    child: Text("No exercises found.",
+                        style: TextStyle(color: subTextColor, fontSize: 16)),
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -177,14 +231,11 @@ class _ExercisesPageState extends State<ExercisesPage> {
                           ),
                           title: Row(
                             children: [
-                              // --- Uniform Thumbnail Container ---
                               Container(
                                 width: 60,
                                 height: 60,
                                 decoration: BoxDecoration(
-                                  color: isDark
-                                      ? espresso
-                                      : const Color(0xFFEDE6D1),
+                                  color: isDark ? espresso : const Color(0xFFEDE6D1),
                                   borderRadius: BorderRadius.circular(10),
                                   boxShadow: [
                                     BoxShadow(
@@ -195,76 +246,51 @@ class _ExercisesPageState extends State<ExercisesPage> {
                                   ],
                                 ),
                                 padding: const EdgeInsets.all(6),
-                                child: Image.asset(
-                                  ex["image"],
-                                  fit: BoxFit.contain,
-                                ),
+                                child: Image.asset(ex["image"], fit: BoxFit.contain),
                               ),
                               const SizedBox(width: 14),
                               Expanded(
                                 child: Text(
                                   ex["name"],
                                   style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: textColor,
-                                  ),
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: textColor),
                                 ),
                               ),
                             ],
                           ),
-                          childrenPadding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 10),
+                          childrenPadding:
+                              const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                           children: [
-                            _buildInfoRow(
-                              "Muscles Worked:",
-                              ex["muscles"],
-                              textColor,
-                              subTextColor,
-                            ),
-                            _buildInfoRow(
-                              "Equipment:",
-                              ex["equipment"],
-                              textColor,
-                              subTextColor,
-                            ),
+                            _buildInfoRow("Muscles Worked:", ex["muscles"], textColor, subTextColor),
+                            _buildInfoRow("Equipment:", ex["equipment"], textColor, subTextColor),
                             const SizedBox(height: 8),
-                            Text(
-                              "Proper Form:",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: textColor,
-                              ),
-                            ),
+                            Text("Proper Form:",
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: textColor)),
                             const SizedBox(height: 4),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: (ex["form"] as List<String>).map((step) {
                                 return Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 2),
+                                  padding: const EdgeInsets.symmetric(vertical: 2),
                                   child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        "• ",
-                                        style: TextStyle(
-                                          color: accentColor.withOpacity(0.8),
-                                          fontSize: 15,
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: Text(
-                                          step,
+                                      Text("• ",
                                           style: TextStyle(
-                                            color: subTextColor,
-                                            fontSize: 15,
-                                            height: 1.4,
-                                          ),
-                                        ),
+                                              color: accentColor.withOpacity(0.8),
+                                              fontSize: 15,
+                                              height: 1.4)),
+                                      Expanded(
+                                        child: Text(step,
+                                            style: TextStyle(
+                                                color: subTextColor,
+                                                fontSize: 15,
+                                                height: 1.4)),
                                       ),
                                     ],
                                   ),
@@ -283,7 +309,6 @@ class _ExercisesPageState extends State<ExercisesPage> {
     );
   }
 
-  // ---------- Helper Info Row ----------
   Widget _buildInfoRow(
       String label, String value, Color textColor, Color subTextColor) {
     return Padding(
@@ -291,22 +316,12 @@ class _ExercisesPageState extends State<ExercisesPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "$label ",
-            style: TextStyle(
-              color: textColor,
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
+          Text("$label ",
               style: TextStyle(
-                color: subTextColor,
-                fontSize: 15,
-              ),
-            ),
+                  color: textColor, fontWeight: FontWeight.w600, fontSize: 15)),
+          Expanded(
+            child:
+                Text(value, style: TextStyle(color: subTextColor, fontSize: 15)),
           ),
         ],
       ),

@@ -151,14 +151,15 @@ class _CalendarPageState extends State<CalendarPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       "Your Workouts",
                       style: TextStyle(
-                        color: lightModeGreen, // Fixed dark green header
+                        color: textColor, // Matches the month text color dynamically
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+
                     const SizedBox(height: 12),
                     _getEventsForDay(_selectedDay ?? _focusedDay).isEmpty
                         ? Center(
