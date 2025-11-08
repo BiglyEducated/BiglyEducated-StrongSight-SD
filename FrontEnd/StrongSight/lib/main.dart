@@ -110,9 +110,10 @@ class MyApp extends StatelessWidget {
       ),
 
 
-      initialRoute: kDebugMode ? '/home' : '/',
+      initialRoute: '/splash',
       routes: {
         '/': (context) => const LoginPage(),
+        '/splash': (context) => const SplashScreen(),
         '/home': (context) => const MainPage(),
         '/register': (context) => const RegisterPage(),
         '/calendar': (context) => const CalendarPage(),
