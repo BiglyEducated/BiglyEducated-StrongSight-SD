@@ -188,7 +188,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const SizedBox(height: 16),
 
-          // --- Edit Profile Button (full width) ---
+          // --- Edit Profile Button ---
           ElevatedButton.icon(
             icon: const Icon(Icons.edit, size: 20),
             label: const Text("Edit Profile", style: TextStyle(fontSize: 16)),
@@ -207,7 +207,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const SizedBox(height: 12),
 
-          // --- Delete Profile Button (full width, red) ---
+          // --- Delete Profile Button ---
           ElevatedButton.icon(
             icon: const Icon(Icons.delete_outline, size: 20),
             label: const Text("Delete Profile", style: TextStyle(fontSize: 16)),
