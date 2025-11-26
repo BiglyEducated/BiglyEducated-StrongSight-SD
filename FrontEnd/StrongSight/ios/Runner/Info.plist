@@ -45,5 +45,13 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	
+	<!-- ADD THESE CAMERA PERMISSIONS -->
+	<key>NSCameraUsageDescription</key>
+	<string>We need camera access to analyze your workout form and provide real-time feedback.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need photo library access to save workout videos and photos.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>We need microphone access to record workout videos with audio.</string>
 </dict>
 </plist>
