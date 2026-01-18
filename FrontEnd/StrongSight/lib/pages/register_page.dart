@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../providers/theme_provider.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -29,15 +31,88 @@ class _RegisterPageState extends State<RegisterPage> {
   String? _selectedGender;
   bool _isLoading = false;
 
+  // Replace with your backend URL (no trailing slash).
+  // For Android emulator use 10.0.2.2 if backend runs on localhost of the host machine.
+  static const String BASE_URL = 'http://localhost:5000';
+
+  Future<http.Response> _signupToApi({
+    required String name,
+    required String email,
+    required String password,
+    String? phone,
+    String? gender,
+    String? weight,
+    String? heightFt,
+    String? heightIn,
+  }) async {
+    final uri = Uri.parse('$BASE_URL/api/auth/signup');
+
+    final body = {
+      'displayName': name,
+      'email': email,
+      'password': password,
+      'phoneNumber': phone,
+      'gender': gender,
+      'weight': weight,
+      'heightFt': heightFt,
+      'heightIn': heightIn,
+    };
+
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+
+    return response;
+  }
+
   Future<void> _handleRegister() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    if (!mounted) return;
 
-    setState(() => _isLoading = false);
-    Navigator.of(context).pushReplacementNamed('/home');
+    try {
+
+      final phoneWithCountryCode = '+1${_phoneController.text}';
+      final response = await _signupToApi(
+        name: _nameController.text,
+        email: _emailController.text,
+        password: _passwordController.text,
+        phone: phoneWithCountryCode,
+        gender: _selectedGender,
+        weight: _weightController.text,
+        heightFt: _heightFtController.text,
+        heightIn: _heightInController.text,
+      );
+
+      if (response.statusCode == 201) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Registration successful!')),
+          );
+          Navigator.of(context).pop();
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Registration failed: ${response.body}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -101,7 +176,8 @@ class _RegisterPageState extends State<RegisterPage> {
                 TextFormField(
                   controller: _nameController,
                   style: TextStyle(color: textColor),
-                  decoration: _inputDecoration("Full Name", cardColor, subTextColor, accentColor),
+                  decoration: _inputDecoration(
+                      "Full Name", cardColor, subTextColor, accentColor),
                   validator: (value) =>
                       value == null || value.isEmpty ? 'Enter your name' : null,
                 ),
@@ -112,7 +188,8 @@ class _RegisterPageState extends State<RegisterPage> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   style: TextStyle(color: textColor),
-                  decoration: _inputDecoration("Email", cardColor, subTextColor, accentColor),
+                  decoration: _inputDecoration(
+                      "Email", cardColor, subTextColor, accentColor),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Enter your email';
@@ -129,11 +206,14 @@ class _RegisterPageState extends State<RegisterPage> {
                   controller: _passwordController,
                   obscureText: !_passwordVisible,
                   style: TextStyle(color: textColor),
-                  decoration: _inputDecoration("Password", cardColor, subTextColor, accentColor)
+                  decoration: _inputDecoration(
+                          "Password", cardColor, subTextColor, accentColor)
                       .copyWith(
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _passwordVisible ? Icons.visibility : Icons.visibility_off,
+                        _passwordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                         color: subTextColor,
                       ),
                       onPressed: () {
@@ -157,11 +237,14 @@ class _RegisterPageState extends State<RegisterPage> {
                   controller: _confirmController,
                   obscureText: !_confirmVisible,
                   style: TextStyle(color: textColor),
-                  decoration: _inputDecoration("Confirm Password", cardColor, subTextColor, accentColor)
+                  decoration: _inputDecoration("Confirm Password", cardColor,
+                          subTextColor, accentColor)
                       .copyWith(
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _confirmVisible ? Icons.visibility : Icons.visibility_off,
+                        _confirmVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                         color: subTextColor,
                       ),
                       onPressed: () {
@@ -185,9 +268,11 @@ class _RegisterPageState extends State<RegisterPage> {
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   style: TextStyle(color: textColor),
-                  decoration: _inputDecoration("Phone Number", cardColor, subTextColor, accentColor),
-                  validator: (value) =>
-                      value == null || value.isEmpty ? 'Enter your phone number' : null,
+                  decoration: _inputDecoration(
+                      "Phone Number", cardColor, subTextColor, accentColor),
+                  validator: (value) => value == null || value.isEmpty
+                      ? 'Enter your phone number'
+                      : null,
                 ),
                 const SizedBox(height: 14),
 
@@ -202,7 +287,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     DropdownMenuItem(value: 'Other', child: Text('Other')),
                   ],
                   onChanged: (value) => setState(() => _selectedGender = value),
-                  decoration: _inputDecoration("Gender", cardColor, subTextColor, accentColor),
+                  decoration: _inputDecoration(
+                      "Gender", cardColor, subTextColor, accentColor),
                   validator: (value) =>
                       value == null ? 'Select your gender' : null,
                 ),
@@ -213,9 +299,11 @@ class _RegisterPageState extends State<RegisterPage> {
                   controller: _weightController,
                   keyboardType: TextInputType.number,
                   style: TextStyle(color: textColor),
-                  decoration: _inputDecoration("Weight (lbs)", cardColor, subTextColor, accentColor),
-                  validator: (value) =>
-                      value == null || value.isEmpty ? 'Enter your weight' : null,
+                  decoration: _inputDecoration(
+                      "Weight (lbs)", cardColor, subTextColor, accentColor),
+                  validator: (value) => value == null || value.isEmpty
+                      ? 'Enter your weight'
+                      : null,
                 ),
                 const SizedBox(height: 14),
 
@@ -227,8 +315,8 @@ class _RegisterPageState extends State<RegisterPage> {
                         controller: _heightFtController,
                         keyboardType: TextInputType.number,
                         style: TextStyle(color: textColor),
-                        decoration:
-                            _inputDecoration("Height (ft)", cardColor, subTextColor, accentColor),
+                        decoration: _inputDecoration("Height (ft)", cardColor,
+                            subTextColor, accentColor),
                         validator: (value) =>
                             value == null || value.isEmpty ? 'ft' : null,
                       ),
@@ -239,8 +327,8 @@ class _RegisterPageState extends State<RegisterPage> {
                         controller: _heightInController,
                         keyboardType: TextInputType.number,
                         style: TextStyle(color: textColor),
-                        decoration:
-                            _inputDecoration("Height (in)", cardColor, subTextColor, accentColor),
+                        decoration: _inputDecoration("Height (in)", cardColor,
+                            subTextColor, accentColor),
                         validator: (value) =>
                             value == null || value.isEmpty ? 'in' : null,
                       ),
@@ -301,8 +389,7 @@ class _RegisterPageState extends State<RegisterPage> {
       hintStyle: TextStyle(color: subTextColor),
       filled: true,
       fillColor: cardColor,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide(color: accentColor.withOpacity(0.4)),
@@ -312,5 +399,18 @@ class _RegisterPageState extends State<RegisterPage> {
         borderSide: BorderSide(color: accentColor, width: 1.8),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmController.dispose();
+    _phoneController.dispose();
+    _weightController.dispose();
+    _heightFtController.dispose();
+    _heightInController.dispose();
+    super.dispose();
   }
 }
