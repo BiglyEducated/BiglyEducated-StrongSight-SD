@@ -14,13 +14,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Enable CORS for all routes
 app.use(cors({
-  origin: [
-    'http://localhost:50889',
-    'http://localhost:5174',
-    'http://localhost:5173',
-    // Add your production URL here later
-  ],
-  credentials: true,
+  origin: '*',  // Allow all origins (dev only)
+  credentials: false,
 }));
 
 

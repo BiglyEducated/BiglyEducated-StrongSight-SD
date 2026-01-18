@@ -4,8 +4,8 @@ import { auth, db } from "../config/firebase.js";
 
 export const signupUser = async (req, res) => {
   const {
+    uid,
     email,
-    password,
     displayName,
     phoneNumber,
     gender,
@@ -14,40 +14,28 @@ export const signupUser = async (req, res) => {
     heightIn,
   } = req.body;
 
-  getAuth()
-    .createUser({
-      email: email,
-      emailVerified: false,
-      password: password,
-      displayName: displayName,
-      phoneNumber: phoneNumber,
-      disabled: false,
-    })
-    .then(async (userRecord) => {
-      console.log("✅ Successfully created new user:", userRecord.uid);
-
-      // ✅ Create a Firestore user document with additional data
-      await db.collection("users").doc(userRecord.uid).set({
-        email,
-        displayName,
-        phoneNumber,
-        gender,
-        weight,
-        heightFt,
-        heightIn,
-        createdAt: new Date(),
-      });
-
-      res.status(201).json({
-        message: "User created successfully",
-        uid: userRecord.uid,
-        email: userRecord.email,
-      });
-    })
-    .catch((error) => {
-      console.log("❌ Error creating new user:", error);
-      res.status(500).json({ error: error.message });
+  try {
+    // Store user data in Firestore (Firebase user already created on frontend)
+    await db.collection("users").doc(uid).set({
+      email,
+      displayName,
+      phoneNumber,
+      gender,
+      weight,
+      heightFt,
+      heightIn,
+      createdAt: new Date(),
     });
+
+    res.status(201).json({
+      message: "User data stored successfully",
+      uid: uid,
+      email: email,
+    });
+  } catch (error) {
+    console.log("❌ Error storing user data:", error);
+    res.status(500).json({ error: error.message });
+  }
 };
 
 // 🧩 Log-out Controller (placeholder for now)

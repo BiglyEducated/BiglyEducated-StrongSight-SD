@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import 'dart:convert';
 import '../providers/theme_provider.dart';
 
@@ -13,6 +15,7 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // ---- Controllers ----
   final TextEditingController _nameController = TextEditingController();
@@ -31,15 +34,75 @@ class _RegisterPageState extends State<RegisterPage> {
   String? _selectedGender;
   bool _isLoading = false;
 
-  // Replace with your backend URL (no trailing slash).
-  // For Android emulator use 10.0.2.2 if backend runs on localhost of the host machine.
   static const String BASE_URL = 'http://localhost:5000';
 
-  Future<http.Response> _signupToApi({
-    required String name,
+  /// Create user in Firebase Auth, then store additional fields in backend
+  Future<void> _handleRegister() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Step 1: Create user in Firebase Auth
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      final user = userCredential.user;
+      if (user == null) {
+        throw Exception('Failed to create user');
+      }
+
+      // Step 2: Update display name in Firebase
+      await user.updateDisplayName(_nameController.text);
+
+      // Step 3: Store additional user data in backend
+      final phoneWithCountryCode = '+1${_phoneController.text}';
+      await _storeUserDataInBackend(
+        uid: user.uid,
+        email: _emailController.text.trim(),
+        displayName: _nameController.text,
+        phoneNumber: phoneWithCountryCode,
+        gender: _selectedGender,
+        weight: _weightController.text,
+        heightFt: _heightFtController.text,
+        heightIn: _heightInController.text,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registration successful!')),
+        );
+        Navigator.of(context).pop();
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Firebase error: ${e.message}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  /// Store additional user data in backend
+  Future<void> _storeUserDataInBackend({
+    required String uid,
     required String email,
-    required String password,
-    String? phone,
+    required String displayName,
+    required String phoneNumber,
     String? gender,
     String? weight,
     String? heightFt,
@@ -48,10 +111,10 @@ class _RegisterPageState extends State<RegisterPage> {
     final uri = Uri.parse('$BASE_URL/api/auth/signup');
 
     final body = {
-      'displayName': name,
+      'uid': uid,
       'email': email,
-      'password': password,
-      'phoneNumber': phone,
+      'displayName': displayName,
+      'phoneNumber': phoneNumber,
       'gender': gender,
       'weight': weight,
       'heightFt': heightFt,
@@ -64,54 +127,8 @@ class _RegisterPageState extends State<RegisterPage> {
       body: jsonEncode(body),
     );
 
-    return response;
-  }
-
-  Future<void> _handleRegister() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-
-      final phoneWithCountryCode = '+1${_phoneController.text}';
-      final response = await _signupToApi(
-        name: _nameController.text,
-        email: _emailController.text,
-        password: _passwordController.text,
-        phone: phoneWithCountryCode,
-        gender: _selectedGender,
-        weight: _weightController.text,
-        heightFt: _heightFtController.text,
-        heightIn: _heightInController.text,
-      );
-
-      if (response.statusCode == 201) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Registration successful!')),
-          );
-          Navigator.of(context).pop();
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Registration failed: ${response.body}')),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+    if (response.statusCode != 201) {
+      throw Exception('Failed to store user data: ${response.body}');
     }
   }
 
@@ -268,6 +285,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   style: TextStyle(color: textColor),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
                   decoration: _inputDecoration(
                       "Phone Number", cardColor, subTextColor, accentColor),
                   validator: (value) => value == null || value.isEmpty

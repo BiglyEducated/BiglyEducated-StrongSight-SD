@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'providers/theme_provider.dart';
 import 'pages/login_page.dart';
 import 'pages/home_page.dart';
@@ -33,9 +35,14 @@ Future<void> verifyAssets() async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ✅ Initialize Firebase before running the app
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   await verifyAssets();
 
-  // 🔹 Wrap your entire app in ChangeNotifierProvider here
   runApp(
     ChangeNotifierProvider(
       create: (_) => ThemeProvider(),
