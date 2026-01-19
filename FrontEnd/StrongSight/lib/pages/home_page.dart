@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../providers/theme_provider.dart';
 
 class HomePage extends StatefulWidget {
@@ -11,16 +14,20 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
-  final String userName = "Yoendry";
+  late String userName = "Loading...";
   final String profileImagePath = "assets/images/profile_placeholder.png";
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   bool _isDrawerOpen = false;
+  bool _isLoadingUserData = true;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
   int _streakDays = 0;
   int? _expandedWorkoutIndex;
+
+  static const String BASE_URL = 'http://localhost:5000';
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // --------------------- Today's Workout (Hard Coded) --------------------------------------------
   final Map<String, dynamic> todaysWorkout = {
@@ -167,6 +174,71 @@ class _HomePageState extends State<HomePage>
     return count;
   }
 
+  /// Fetch user display name from backend using verify-token API
+  Future<void> _fetchUserDisplayName() async {
+    try {
+      // Get the current user from Firebase Auth
+      final user = _auth.currentUser;
+      if (user == null) {
+        setState(() {
+          userName = "Guest";
+          _isLoadingUserData = false;
+        });
+        return;
+      }
+
+      // Get the ID token from Firebase Auth
+      final idToken = await user.getIdToken();
+
+      // Call the verify-token endpoint to get user data securely
+      final response = await http.post(
+        Uri.parse('$BASE_URL/api/auth/verify-token'),
+        headers: {
+          'Authorization': 'Bearer $idToken',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // Token verified successfully
+        // Now fetch the actual user info
+        final userInfoResponse = await http.get(
+          Uri.parse('$BASE_URL/api/auth/get-userInfo'),
+          headers: {
+            'Authorization': 'Bearer $idToken',
+            'Content-Type': 'application/json',
+          },
+        );
+
+        if (userInfoResponse.statusCode == 200) {
+          final data = jsonDecode(userInfoResponse.body);
+          final displayName = data['data']['displayName'] ?? 'User';
+          setState(() {
+            userName = displayName;
+            _isLoadingUserData = false;
+          });
+        } else {
+          setState(() {
+            userName = "User";
+            _isLoadingUserData = false;
+          });
+        }
+      } else {
+        // Token verification failed
+        setState(() {
+          userName = "User";
+          _isLoadingUserData = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching user data: $e');
+      setState(() {
+        userName = "User";
+        _isLoadingUserData = false;
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -180,6 +252,9 @@ class _HomePageState extends State<HomePage>
 
     //Calculate weekly streak
     _streakDays = _calculateWeeklyStreak();
+
+    // Fetch user display name on init
+    _fetchUserDisplayName();
   }
 
   @override
@@ -203,8 +278,7 @@ class _HomePageState extends State<HomePage>
     final bgColor = isDark ? espresso : const Color(0xFFFCF5E3);
     final cardColor = isDark ? const Color(0xFF1A1917) : Colors.white;
     final primaryTextColor = isDark ? darkModeGreen : lightModeGreen;
-    final subTextColor =
-        isDark ? const Color(0xFFD9CBB8) : Colors.grey[700]!;
+    final subTextColor = isDark ? const Color(0xFFD9CBB8) : Colors.grey[700]!;
     final accentColor = isDark ? darkModeGreen : lightModeGreen;
 
     return Scaffold(
@@ -232,12 +306,18 @@ class _HomePageState extends State<HomePage>
                         fontWeight: FontWeight.bold,
                         color: primaryTextColor)),
                 const SizedBox(height: 8),
-                Text("Email: yoendry@example.com", style: TextStyle(color: subTextColor)),
+                Text(_auth.currentUser?.email ?? "No email",
+                    style: TextStyle(color: subTextColor)),
                 Divider(color: subTextColor.withOpacity(0.4)),
                 ListTile(
                   leading: const Icon(Icons.logout, color: Colors.redAccent),
                   title: Text("Log Out", style: TextStyle(color: subTextColor)),
-                  onTap: () => Navigator.pushReplacementNamed(context, '/'),
+                  onTap: () async {
+                    await _auth.signOut();
+                    if (mounted) {
+                      Navigator.pushReplacementNamed(context, '/');
+                    }
+                  },
                 ),
               ],
             ),
@@ -264,7 +344,7 @@ class _HomePageState extends State<HomePage>
                           Text("Welcome back,",
                               style: TextStyle(
                                   color: green.withOpacity(0.8), fontSize: 16)),
-                          Text(userName,
+                          Text(_isLoadingUserData ? "Loading..." : userName,
                               style: const TextStyle(
                                   color: green,
                                   fontSize: 24,
@@ -289,36 +369,26 @@ class _HomePageState extends State<HomePage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _buildStreakCard(
-                          cardColor, primaryTextColor, subTextColor, accentColor),
+                      _buildStreakCard(cardColor, primaryTextColor,
+                          subTextColor, accentColor),
                       const SizedBox(height: 20),
-
-                      _buildSectionTitle(
-                          "Today's Workout", primaryTextColor),
-                      _buildTodaysWorkout(
-                          cardColor, primaryTextColor, subTextColor, accentColor),
-
+                      _buildSectionTitle("Today's Workout", primaryTextColor),
+                      _buildTodaysWorkout(cardColor, primaryTextColor,
+                          subTextColor, accentColor),
                       const SizedBox(height: 20),
-
-                      _buildSectionTitle(
-                          "Recent Workouts", primaryTextColor),
+                      _buildSectionTitle("Recent Workouts", primaryTextColor),
                       _buildExpandableWorkoutList(cardColor, primaryTextColor,
                           subTextColor, accentColor),
-
                       const SizedBox(height: 20),
-
                       _buildSectionTitle(
                           "Metrics & Improvements", primaryTextColor),
-                      _buildMetricsRow(
-                          cardColor, primaryTextColor, subTextColor, accentColor),
-
+                      _buildMetricsRow(cardColor, primaryTextColor,
+                          subTextColor, accentColor),
                       const SizedBox(height: 20),
-
                       _buildSectionTitle(
                           "Personal Records (PR Tracker)", primaryTextColor),
-                      _buildPRTracker(
-                          cardColor, primaryTextColor, subTextColor, accentColor),
-
+                      _buildPRTracker(cardColor, primaryTextColor, subTextColor,
+                          accentColor),
                       const SizedBox(height: 80),
                     ],
                   ),
@@ -344,15 +414,14 @@ class _HomePageState extends State<HomePage>
 
   Widget _buildSectionTitle(String title, Color textColor) {
     return Text(title,
-        style:
-            TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: textColor));
+        style: TextStyle(
+            fontSize: 20, fontWeight: FontWeight.w700, color: textColor));
   }
 
   // ---------- WEEKLY STREAK CARD ----------
   Widget _buildStreakCard(
       Color cardColor, Color textColor, Color subTextColor, Color accentColor) {
-    final streakBars =
-        List.generate(7, (i) => i < _streakDays ? 1.0 : 0.0);
+    final streakBars = List.generate(7, (i) => i < _streakDays ? 1.0 : 0.0);
 
     return Container(
       decoration: BoxDecoration(
@@ -407,11 +476,10 @@ class _HomePageState extends State<HomePage>
   }
 
   // ---------- Today's Workout ----------
-  Widget _buildTodaysWorkout(Color cardColor, Color textColor,
-      Color subTextColor, Color accentColor) {
-    final bool hasWorkout =
-        todaysWorkout["exercises"] != null &&
-            (todaysWorkout["exercises"] as List).isNotEmpty;
+  Widget _buildTodaysWorkout(
+      Color cardColor, Color textColor, Color subTextColor, Color accentColor) {
+    final bool hasWorkout = todaysWorkout["exercises"] != null &&
+        (todaysWorkout["exercises"] as List).isNotEmpty;
 
     return Container(
       decoration: BoxDecoration(
@@ -446,8 +514,7 @@ class _HomePageState extends State<HomePage>
                           style: TextStyle(
                               color: textColor, fontWeight: FontWeight.w500)),
                       Text(exercise["sets"],
-                          style:
-                              TextStyle(color: subTextColor, fontSize: 14)),
+                          style: TextStyle(color: subTextColor, fontSize: 14)),
                     ],
                   );
                 }).toList(),
@@ -485,7 +552,6 @@ class _HomePageState extends State<HomePage>
   // ---------- Expandable Recent Workouts ----------
   Widget _buildExpandableWorkoutList(
       Color cardColor, Color textColor, Color subTextColor, Color accentColor) {
-    
     //Takes the 6 most recent workouts
     final recent = workouts.take(6).toList();
 
@@ -511,84 +577,78 @@ class _HomePageState extends State<HomePage>
                     offset: const Offset(0, 4))
               ],
             ),
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Text(workout["title"],
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: accentColor)),
+                  Icon(isExpanded ? Icons.expand_less : Icons.expand_more,
+                      color: subTextColor)
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(workout["date"],
+                      style: TextStyle(color: subTextColor, fontSize: 14)),
+                  Text(workout["duration"],
+                      style: TextStyle(
+                          color: subTextColor, fontWeight: FontWeight.w500)),
+                ],
+              ),
+              AnimatedCrossFade(
+                firstChild: const SizedBox.shrink(),
+                secondChild: Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Column(
                     children: [
-                      Text(workout["title"],
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: accentColor)),
-                      Icon(isExpanded ? Icons.expand_less : Icons.expand_more,
-                          color: subTextColor)
+                      ...workout["exercises"].map<Widget>((e) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(e["name"],
+                                  style: TextStyle(
+                                      color: textColor,
+                                      fontWeight: FontWeight.w500)),
+                              Text(e["sets"],
+                                  style: TextStyle(
+                                      color: subTextColor, fontSize: 13)),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(workout["date"],
-                          style: TextStyle(color: subTextColor, fontSize: 14)),
-                      Text(workout["duration"],
-                          style: TextStyle(
-                              color: subTextColor,
-                              fontWeight: FontWeight.w500)),
-                    ],
-                  ),
-                  AnimatedCrossFade(
-                    firstChild: const SizedBox.shrink(),
-                    secondChild: Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Column(
-                        children: [
-                          ...workout["exercises"].map<Widget>((e) {
-                            return Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 2),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(e["name"],
-                                      style: TextStyle(
-                                          color: textColor,
-                                          fontWeight: FontWeight.w500)),
-                                  Text(e["sets"],
-                                      style: TextStyle(
-                                          color: subTextColor,
-                                          fontSize: 13)),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                        ],
-                      ),
-                    ),
-                    crossFadeState: isExpanded
-                        ? CrossFadeState.showSecond
-                        : CrossFadeState.showFirst,
-                    duration: const Duration(milliseconds: 200),
-                  ),
-                ]),
+                ),
+                crossFadeState: isExpanded
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+                duration: const Duration(milliseconds: 200),
+              ),
+            ]),
           ),
         );
       }),
     );
   }
 
-
   // ---------- Metrics ----------
-  Widget _buildMetricsRow(Color cardColor, Color textColor,
-      Color subTextColor, Color accentColor) {
+  Widget _buildMetricsRow(
+      Color cardColor, Color textColor, Color subTextColor, Color accentColor) {
     final metrics = [
-      //Track the amount of days worked for x amount of months 
+      //Track the amount of days worked for x amount of months
       {"title": "Workout Frequency", "value": "87%"},
-      //Take the average of the users workout lenghts for a week at a time 
+      //Take the average of the users workout lenghts for a week at a time
       {"title": "Duration", "value": "Average: 1hr 30min"},
-      //Maybe prompt the user for their weigth once a week and display the difference 
+      //Maybe prompt the user for their weigth once a week and display the difference
       {"title": "Weight", "value": "+5lbs"},
     ];
 
@@ -629,8 +689,8 @@ class _HomePageState extends State<HomePage>
   }
 
   // ---------- PR TRACKER ----------
-  Widget _buildPRTracker(Color cardColor, Color textColor,
-      Color subTextColor, Color accentColor) {
+  Widget _buildPRTracker(
+      Color cardColor, Color textColor, Color subTextColor, Color accentColor) {
     final prs = [
       {"lift": "Bench Press", "weight": "205 lbs", "date": "October 26, 2025"},
       {"lift": "Squat", "weight": "275 lbs", "date": "September 1, 2025"},
