@@ -22,7 +22,7 @@ class _HomePageState extends State<HomePage>
   int _streakDays = 0;
   int? _expandedWorkoutIndex;
 
-  // --------------------- Today's Workout (Hard Coded) --------------------------------------------
+  // --------------------- Today's Workout --------------------------------------------
   final Map<String, dynamic> todaysWorkout = {
     "title": "Push Day",
     "focus": "Chest, Shoulders, Triceps",
@@ -99,8 +99,6 @@ class _HomePageState extends State<HomePage>
   ];
 
   // --------------------- WEEKLY STREAK LOGIC ---------------------------------------------
-
-  //Convert "Nov 4" → DateTime
   DateTime _parseWorkoutDate(String dateString) {
     final parts = dateString.split(" ");
     final monthStr = parts[0];
@@ -308,14 +306,14 @@ class _HomePageState extends State<HomePage>
                       const SizedBox(height: 20),
 
                       _buildSectionTitle(
-                          "Metrics & Improvements", primaryTextColor),
+                          "Metrics", primaryTextColor),
                       _buildMetricsRow(
                           cardColor, primaryTextColor, subTextColor, accentColor),
 
                       const SizedBox(height: 20),
 
                       _buildSectionTitle(
-                          "Personal Records (PR Tracker)", primaryTextColor),
+                          "Personal Records", primaryTextColor),
                       _buildPRTracker(
                           cardColor, primaryTextColor, subTextColor, accentColor),
 
