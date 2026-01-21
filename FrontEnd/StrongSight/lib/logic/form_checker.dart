@@ -8,18 +8,36 @@ class FormChecker {
   int _kneeCaveFrameCount = 0;
   static const int _kneeCaveThresholdFrames = 3;
   static const double _kneeCaveRatio = 0.75;
+  
+  // Symmetry detection state
+  int _asymmetryFrameCount = 0;
+  static const int _asymmetryThresholdFrames = 5; // Increased from 3 to 5 (less sensitive)
+  static const double _asymmetryAngleDiff = 20.0; // Increased from 15.0 to 20.0 (less sensitive)
+  
+  // Forward lean detection
+  int _forwardLeanFrameCount = 0;
+  static const int _forwardLeanThresholdFrames = 3; // Decreased from 4 to 3 (more sensitive)
+  static const double _forwardLeanRatio = 0.75; // Increased from 0.7 to 0.75 (more sensitive)
+  
+  // ERROR PERSISTENCE - Keep showing error for longer
+  String? _lastErrorMessage;
+  FormErrorType? _lastErrorType;
+  int _errorDisplayFrames = 0;
+  static const int _errorPersistFrames = 15; // Show error for ~1.5 seconds (15 frames)
+  
   static const double _minConfidence = 0.6;
 
   /// Reset form checker state (call when starting new exercise)
   void reset() {
     _kneeCaveFrameCount = 0;
+    _asymmetryFrameCount = 0;
+    _forwardLeanFrameCount = 0;
+    _lastErrorMessage = null;
+    _lastErrorType = null;
+    _errorDisplayFrames = 0;
   }
 
   /// Check for knee cave during squat
-  /// 
-  /// Compares knee distance to ankle distance
-  /// Ratio < 0.75 indicates knees collapsing inward
-  /// Must persist for 3 frames to avoid false positives
   FormCheckResult checkKneeCave(
     Pose pose,
     ExerciseState currentState,
@@ -29,43 +47,30 @@ class FormChecker {
     final leftAnkle = pose.landmarks[PoseLandmarkType.leftAnkle];
     final rightAnkle = pose.landmarks[PoseLandmarkType.rightAnkle];
 
-    // Validate landmarks exist and have good confidence
     if (leftKnee == null || rightKnee == null || 
         leftAnkle == null || rightAnkle == null ||
         leftKnee.likelihood < _minConfidence || 
         rightKnee.likelihood < _minConfidence) {
       _kneeCaveFrameCount = 0;
-      return FormCheckResult(
-        hasError: false,
-        errorMessage: null,
-      );
+      return FormCheckResult(hasError: false);
     }
 
-    // Only check during descent and bottom phases
     bool isRelevantPhase = currentState == ExerciseState.descent || 
                            currentState == ExerciseState.bottom;
 
     if (!isRelevantPhase) {
       _kneeCaveFrameCount = 0;
-      return FormCheckResult(
-        hasError: false,
-        errorMessage: null,
-      );
+      return FormCheckResult(hasError: false);
     }
 
-    // Calculate knee and ankle distances
     double kneeDist = AngleCalculator.calculateHorizontalDistance(leftKnee, rightKnee);
     double ankleDist = AngleCalculator.calculateHorizontalDistance(leftAnkle, rightAnkle);
 
     if (ankleDist == 0) {
       _kneeCaveFrameCount = 0;
-      return FormCheckResult(
-        hasError: false,
-        errorMessage: null,
-      );
+      return FormCheckResult(hasError: false);
     }
 
-    // Calculate ratio and check threshold
     double ratio = kneeDist / ankleDist;
 
     if (ratio < _kneeCaveRatio) {
@@ -74,7 +79,6 @@ class FormChecker {
       _kneeCaveFrameCount = 0;
     }
 
-    // Only flag error if it persists
     if (_kneeCaveFrameCount >= _kneeCaveThresholdFrames) {
       return FormCheckResult(
         hasError: true,
@@ -84,32 +88,125 @@ class FormChecker {
       );
     }
 
-    return FormCheckResult(
-      hasError: false,
-      errorMessage: null,
-    );
+    return FormCheckResult(hasError: false);
   }
 
-  /// Check symmetry between left and right sides
-  /// [cite: 1313, 1314, 1317]
-  FormCheckResult checkSymmetry(Pose pose) {
+  /// Check for forward lean during squat (MORE SENSITIVE NOW)
+  /// 
+  /// From the front, we can detect if torso is leaning too far forward
+  /// by comparing the vertical distance from shoulder to hip vs hip to knee
+  FormCheckResult checkForwardLean(
+    Pose pose,
+    ExerciseState currentState,
+  ) {
+    final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
+    final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
+    final rightHip = pose.landmarks[PoseLandmarkType.rightHip];
     final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
     final rightKnee = pose.landmarks[PoseLandmarkType.rightKnee];
 
-    if (leftKnee == null || rightKnee == null) {
+    if (leftShoulder == null || rightShoulder == null ||
+        leftHip == null || rightHip == null ||
+        leftKnee == null || rightKnee == null ||
+        leftShoulder.likelihood < _minConfidence ||
+        leftHip.likelihood < _minConfidence) {
+      _forwardLeanFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
 
-    // Flag if one side lags behind by > 15 degrees
-    double horizontalDiff = AngleCalculator.calculateHorizontalDistance(leftKnee, rightKnee);
+    bool isRelevantPhase = currentState == ExerciseState.descent || 
+                           currentState == ExerciseState.bottom;
+
+    if (!isRelevantPhase) {
+      _forwardLeanFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    double avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+    double avgHipY = (leftHip.y + rightHip.y) / 2;
+    double avgKneeY = (leftKnee.y + rightKnee.y) / 2;
+
+    double shoulderToHipDist = (avgHipY - avgShoulderY).abs();
+    double hipToKneeDist = (avgKneeY - avgHipY).abs();
+
+    if (hipToKneeDist == 0) {
+      _forwardLeanFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    double ratio = shoulderToHipDist / hipToKneeDist;
+
+    // More sensitive threshold - catches forward lean earlier
+    if (ratio < _forwardLeanRatio) {
+      _forwardLeanFrameCount++;
+      
+      if (_forwardLeanFrameCount >= _forwardLeanThresholdFrames) {
+        return FormCheckResult(
+          hasError: true,
+          errorMessage: "⚠️ FORWARD LEAN - Stay upright!",
+          errorType: FormErrorType.forwardLean,
+          severity: FormErrorSeverity.warning,
+        );
+      }
+    } else {
+      _forwardLeanFrameCount = 0;
+    }
+
+    return FormCheckResult(hasError: false);
+  }
+
+  /// Check symmetry between left and right sides (LESS SENSITIVE NOW)
+  /// 
+  /// Compares knee angles on both sides
+  /// Only flags MAJOR differences (20+ degrees)
+  FormCheckResult checkSymmetry(
+    Pose pose,
+    ExerciseState currentState,
+  ) {
+    final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
+    final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
+    final leftAnkle = pose.landmarks[PoseLandmarkType.leftAnkle];
     
-    if (horizontalDiff > 15) {
-      return FormCheckResult(
-        hasError: true,
-        errorMessage: "⚠️ Uneven movement - balance both sides",
-        errorType: FormErrorType.asymmetry,
-        severity: FormErrorSeverity.warning,
-      );
+    final rightHip = pose.landmarks[PoseLandmarkType.rightHip];
+    final rightKnee = pose.landmarks[PoseLandmarkType.rightKnee];
+    final rightAnkle = pose.landmarks[PoseLandmarkType.rightAnkle];
+
+    if (leftHip == null || leftKnee == null || leftAnkle == null ||
+        rightHip == null || rightKnee == null || rightAnkle == null ||
+        leftKnee.likelihood < _minConfidence || 
+        rightKnee.likelihood < _minConfidence) {
+      _asymmetryFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    bool isRelevantPhase = currentState == ExerciseState.descent || 
+                           currentState == ExerciseState.bottom;
+
+    if (!isRelevantPhase) {
+      _asymmetryFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    double leftKneeAngle = AngleCalculator.calculateAngle(leftHip, leftKnee, leftAnkle);
+    double rightKneeAngle = AngleCalculator.calculateAngle(rightHip, rightKnee, rightAnkle);
+
+    double angleDifference = (leftKneeAngle - rightKneeAngle).abs();
+
+    // Less sensitive - only flag major asymmetry
+    if (angleDifference > _asymmetryAngleDiff) {
+      _asymmetryFrameCount++;
+      
+      if (_asymmetryFrameCount >= _asymmetryThresholdFrames) {
+        return FormCheckResult(
+          hasError: true,
+          errorMessage: "⚠️ UNEVEN - Balance both sides!",
+          errorType: FormErrorType.asymmetry,
+          severity: FormErrorSeverity.warning,
+        );
+      }
+    } else {
+      _asymmetryFrameCount = 0;
     }
 
     return FormCheckResult(hasError: false);
@@ -142,6 +239,56 @@ class FormChecker {
 
     return FormCheckResult(hasError: false);
   }
+
+  /// Run all form checks and return highest priority error with persistence
+  FormCheckResult checkAllSquatForm(
+    Pose pose,
+    ExerciseState currentState,
+  ) {
+    // Check all form errors
+    final kneeCaveResult = checkKneeCave(pose, currentState);
+    final forwardLeanResult = checkForwardLean(pose, currentState);
+    final symmetryResult = checkSymmetry(pose, currentState);
+
+    // Find current error (if any)
+    FormCheckResult? currentError;
+    
+    if (kneeCaveResult.hasError) {
+      currentError = kneeCaveResult;
+    } else if (forwardLeanResult.hasError) {
+      currentError = forwardLeanResult;
+    } else if (symmetryResult.hasError) {
+      currentError = symmetryResult;
+    }
+
+    // ERROR PERSISTENCE LOGIC
+    if (currentError != null && currentError.hasError) {
+      // New error detected - set it and reset timer
+      _lastErrorMessage = currentError.errorMessage;
+      _lastErrorType = currentError.errorType;
+      _errorDisplayFrames = _errorPersistFrames;
+      
+      return currentError;
+    } 
+    // No current error, but we have a persisting error to show
+    else if (_errorDisplayFrames > 0) {
+      _errorDisplayFrames--;
+      
+      // Keep showing the last error
+      return FormCheckResult(
+        hasError: true,
+        errorMessage: _lastErrorMessage,
+        errorType: _lastErrorType,
+        severity: FormErrorSeverity.warning,
+      );
+    }
+    // No errors at all
+    else {
+      _lastErrorMessage = null;
+      _lastErrorType = null;
+      return FormCheckResult(hasError: false);
+    }
+  }
 }
 
 /// Result of a form check
@@ -166,11 +313,12 @@ enum FormErrorType {
   lowConfidence,
   shallowDepth,
   excessiveSpeed,
+  forwardLean,
 }
 
 /// Severity levels for form errors
 enum FormErrorSeverity {
-  info,     // Just information, not critical
-  warning,  // Should correct but not dangerous
-  danger,   // Could cause injury
+  info,
+  warning,
+  danger,
 }

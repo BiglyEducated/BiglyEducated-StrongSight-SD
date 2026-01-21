@@ -108,10 +108,9 @@ class PoseOverlayPainter extends CustomPainter {
     double translatedX = (x * scaleX) + offsetX;
     double translatedY = (y * scaleY) + offsetY;
     
-    // Mirror for front camera
-    if (!isBackCamera) {
-      translatedX = screenSize.width - translatedX;
-    }
+    // DON'T mirror for front camera - ML Kit already provides mirrored coordinates
+    // The camera preview is mirrored, and ML Kit matches that
+    // So we just use the coordinates as-is
     
     return Offset(translatedX, translatedY);
   }

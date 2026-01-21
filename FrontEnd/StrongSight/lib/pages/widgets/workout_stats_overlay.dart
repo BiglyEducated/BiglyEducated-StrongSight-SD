@@ -37,32 +37,56 @@ class WorkoutStatsOverlay extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           
-          // Feedback message
-          Text(
-            feedback,
-            style: TextStyle(
-              color: _getFeedbackColor(),
-              fontSize: 18,
+          // Feedback message - BIGGER and MORE VISIBLE when error
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: hasError ? 16 : 0,
+              vertical: hasError ? 12 : 0,
             ),
-            textAlign: TextAlign.center,
+            decoration: hasError ? BoxDecoration(
+              color: Colors.red.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Colors.red,
+                width: 2,
+              ),
+            ) : null,
+            child: Text(
+              feedback,
+              style: TextStyle(
+                color: _getFeedbackColor(),
+                fontSize: hasError ? 22 : 18, // Bigger when error
+                fontWeight: hasError ? FontWeight.bold : FontWeight.normal,
+                shadows: hasError ? [
+                  Shadow(
+                    color: Colors.black.withOpacity(0.8),
+                    offset: const Offset(2, 2),
+                    blurRadius: 4,
+                  ),
+                ] : null,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ),
           const SizedBox(height: 4),
           
           // Phase indicator
-          Text(
-            'Phase: $phase',
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
+          if (!hasError) // Hide phase when showing error
+            Text(
+              'Phase: $phase',
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+              ),
             ),
-          ),
         ],
       ),
     );
   }
 
   Color _getFeedbackColor() {
-    if (hasError || feedback.contains('⚠️') || feedback.contains('CAVE')) {
+    if (hasError || feedback.contains('⚠️') || feedback.contains('CAVE') || 
+        feedback.contains('LEAN') || feedback.contains('UNEVEN')) {
       return Colors.redAccent;
     }
     return Colors.greenAccent;

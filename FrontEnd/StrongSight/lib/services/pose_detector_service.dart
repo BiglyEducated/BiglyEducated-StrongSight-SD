@@ -84,8 +84,8 @@ class PoseDetectorService {
     // Update rep counter
     _repCounter!.update(angle);
 
-    // Check for form errors
-    final formCheck = _formChecker.checkKneeCave(
+    // Check ALL form errors (knee cave, back arch, symmetry)
+    final formCheck = _formChecker.checkAllSquatForm(
       pose,
       _repCounter!.currentState,
     );
