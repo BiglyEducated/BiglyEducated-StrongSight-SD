@@ -1,183 +1,129 @@
-import 'dart:math';
-import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
-import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:camera/camera.dart';
+import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'dart:ui';
-import 'dart:io' show Platform;
+import '../logic/rep_counter.dart';
+import '../logic/form_checker.dart';
+import '../logic/angle_calculator.dart';
+import '../models/exercise_config.dart';
+import '../models/pose_analysis_result.dart';
 
+/// Service for pose detection and exercise analysis
+/// Coordinates between ML Kit, RepCounter, and FormChecker
 class PoseDetectorService {
   late PoseDetector _poseDetector;
+  RepCounter? _repCounter;
+  final FormChecker _formChecker = FormChecker();
   bool _isInitialized = false;
-  
-  // Public getter for initialization status
+
   bool get isInitialized => _isInitialized;
 
-  // Initialize the pose detector
+  /// Initialize the pose detector with ML Kit
   Future<void> initialize() async {
-    if (_isInitialized) return; // Don't initialize twice
+    if (_isInitialized) return;
     
-    final options = PoseDetectorOptions(
-      mode: PoseDetectionMode.stream,
-      model: PoseDetectionModel.accurate,
+    _poseDetector = PoseDetector(
+      options: PoseDetectorOptions(
+        mode: PoseDetectionMode.stream,
+        model: PoseDetectionModel.accurate,
+      ),
     );
-    _poseDetector = PoseDetector(options: options);
     _isInitialized = true;
   }
 
-  // Process a camera image and detect poses
-  Future<List<Pose>> detectPoses(CameraImage image, InputImageRotation rotation) async {
+  /// Set the current exercise being performed
+  void setExercise(String exerciseName) {
+    final config = ExerciseLibrary.configs[exerciseName.toLowerCase()];
+    if (config != null) {
+      _repCounter = RepCounter(config);
+      _formChecker.reset();
+    }
+  }
+
+  /// Detect poses from camera image
+  Future<List<Pose>> detectPoses(
+    CameraImage image,
+    InputImageRotation rotation,
+  ) async {
     if (!_isInitialized) {
-      await initialize();
+      throw Exception('PoseDetectorService not initialized');
     }
 
-    // Convert CameraImage to InputImage
-    final inputImage = _convertCameraImage(image, rotation);
+    final inputImage = _inputImageFromCameraImage(image, rotation);
     if (inputImage == null) return [];
 
-    try {
-      // Detect poses
-      final poses = await _poseDetector.processImage(inputImage);
-      return poses;
-    } catch (e) {
-      print('Error detecting poses: $e');
-      return [];
-    }
+    return await _poseDetector.processImage(inputImage);
   }
 
-  // Convert CameraImage to InputImage for ML Kit
-  InputImage? _convertCameraImage(CameraImage image, InputImageRotation rotation) {
-    try {
-      // Platform-specific image format handling
-      if (Platform.isIOS) {
-        return _convertCameraImageIOS(image, rotation);
-      } else {
-        return _convertCameraImageAndroid(image, rotation);
-      }
-    } catch (e) {
-      print('Error converting camera image: $e');
-      return null;
+  /// Analyze squat form and return structured result
+  PoseAnalysisResult analyzeSquatForm(Pose pose) {
+    if (_repCounter == null) {
+      return PoseAnalysisResult.invalid('No exercise selected');
     }
+
+    final config = _repCounter!.config;
+    final vertex = pose.landmarks[config.vertexJoint];
+    final pointA = pose.landmarks[config.pointA];
+    final pointB = pose.landmarks[config.pointB];
+
+    // Check tracking confidence
+    final confidenceCheck = _formChecker.checkTrackingConfidence(
+      vertex,
+      pointA,
+      pointB,
+    );
+
+    if (confidenceCheck.hasError) {
+      return PoseAnalysisResult.invalid(
+        confidenceCheck.errorMessage ?? 'Low tracking confidence',
+      );
+    }
+
+    // Calculate knee angle
+    final angle = AngleCalculator.calculateAngle(pointA!, vertex!, pointB!);
+
+    // Update rep counter
+    _repCounter!.update(angle);
+
+    // Check for form errors
+    final formCheck = _formChecker.checkKneeCave(
+      pose,
+      _repCounter!.currentState,
+    );
+
+    // Build result
+    return PoseAnalysisResult.fromAnalysis(
+      count: _repCounter!.count,
+      state: _repCounter!.currentState,
+      feedbackMessage: _repCounter!.feedbackMessage,
+      angle: angle,
+      hasFormError: formCheck.hasError,
+      formErrorMessage: formCheck.errorMessage,
+    );
   }
 
-  // iOS-specific conversion (bgra8888 format)
-  InputImage? _convertCameraImageIOS(CameraImage image, InputImageRotation rotation) {
-    try {
-      // For iOS, we need to handle bgra8888 format
-      final plane = image.planes[0];
-      
-      final inputImageData = InputImageMetadata(
+  /// Convert CameraImage to InputImage for ML Kit
+  InputImage? _inputImageFromCameraImage(
+    CameraImage image,
+    InputImageRotation rotation,
+  ) {
+    final format = InputImageFormatValue.fromRawValue(image.format.raw);
+    if (format == null || image.planes.isEmpty) return null;
+
+    final plane = image.planes.first;
+
+    return InputImage.fromBytes(
+      bytes: plane.bytes,
+      metadata: InputImageMetadata(
         size: Size(image.width.toDouble(), image.height.toDouble()),
         rotation: rotation,
-        format: InputImageFormat.bgra8888,
+        format: format,
         bytesPerRow: plane.bytesPerRow,
-      );
-
-      return InputImage.fromBytes(
-        bytes: plane.bytes,
-        metadata: inputImageData,
-      );
-    } catch (e) {
-      print('Error converting iOS camera image: $e');
-      return null;
-    }
+      ),
+    );
   }
 
-  // Android-specific conversion (nv21 format)
-  InputImage? _convertCameraImageAndroid(CameraImage image, InputImageRotation rotation) {
-    try {
-      final WriteBuffer allBytes = WriteBuffer();
-      for (final Plane plane in image.planes) {
-        allBytes.putUint8List(plane.bytes);
-      }
-      final bytes = allBytes.done().buffer.asUint8List();
-
-      final inputImageData = InputImageMetadata(
-        size: Size(image.width.toDouble(), image.height.toDouble()),
-        rotation: rotation,
-        format: InputImageFormat.nv21,
-        bytesPerRow: image.planes[0].bytesPerRow,
-      );
-
-      return InputImage.fromBytes(
-        bytes: bytes,
-        metadata: inputImageData,
-      );
-    } catch (e) {
-      print('Error converting Android camera image: $e');
-      return null;
-    }
-  }
-
-  // Get angle between three points (useful for form analysis)
-  double getAngle(PoseLandmark firstPoint, PoseLandmark midPoint, PoseLandmark lastPoint) {
-    double result = (atan2(lastPoint.y - midPoint.y, lastPoint.x - midPoint.x) -
-            atan2(firstPoint.y - midPoint.y, firstPoint.x - midPoint.x)) *
-        (180 / pi);
-
-    result = result.abs();
-    if (result > 180) {
-      result = 360.0 - result;
-    }
-    return result;
-  }
-
-  // Analyze squat form
-  Map<String, dynamic> analyzeSquatForm(Pose pose) {
-    final landmarks = pose.landmarks;
-    
-    // Get key points for squat analysis
-    final leftHip = landmarks[PoseLandmarkType.leftHip];
-    final leftKnee = landmarks[PoseLandmarkType.leftKnee];
-    final leftAnkle = landmarks[PoseLandmarkType.leftAnkle];
-    
-    final rightHip = landmarks[PoseLandmarkType.rightHip];
-    final rightKnee = landmarks[PoseLandmarkType.rightKnee];
-    final rightAnkle = landmarks[PoseLandmarkType.rightAnkle];
-
-    if (leftHip == null || leftKnee == null || leftAnkle == null ||
-        rightHip == null || rightKnee == null || rightAnkle == null) {
-      return {'isValid': false, 'feedback': 'Cannot detect all body points'};
-    }
-
-    // Calculate knee angles
-    final leftKneeAngle = getAngle(leftHip, leftKnee, leftAnkle);
-    final rightKneeAngle = getAngle(rightHip, rightKnee, rightAnkle);
-    final avgKneeAngle = (leftKneeAngle + rightKneeAngle) / 2;
-
-    // Squat depth analysis
-    String phase = 'standing';
-    String feedback = '';
-    
-    if (avgKneeAngle > 160) {
-      phase = 'standing';
-      feedback = 'Ready to squat';
-    } else if (avgKneeAngle > 120) {
-      phase = 'partial';
-      feedback = 'Quarter squat';
-    } else if (avgKneeAngle > 90) {
-      phase = 'parallel';
-      feedback = 'Good depth! Parallel squat';
-    } else {
-      phase = 'deep';
-      feedback = 'Deep squat - excellent!';
-    }
-
-    return {
-      'isValid': true,
-      'phase': phase,
-      'leftKneeAngle': leftKneeAngle,
-      'rightKneeAngle': rightKneeAngle,
-      'avgKneeAngle': avgKneeAngle,
-      'feedback': feedback,
-    };
-  }
-
-  // Clean up resources
+  /// Clean up resources
   void dispose() {
-    if (_isInitialized) {
-      _poseDetector.close();
-      _isInitialized = false;
-    }
+    _poseDetector.close();
   }
 }
