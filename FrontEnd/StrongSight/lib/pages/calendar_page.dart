@@ -13,7 +13,7 @@ class CalendarPage extends StatefulWidget {
 class _CalendarPageState extends State<CalendarPage> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-
+//----------- Hard Coded Days(Remove once APIs in place)----------------------
   final Map<DateTime, List<String>> _workoutEvents = {
     DateTime.utc(2025, 10, 8): ['Leg Day', 'Evening Stretch'],
     DateTime.utc(2025, 10, 9): ['Push Day'],
@@ -29,7 +29,7 @@ class _CalendarPageState extends State<CalendarPage> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
 
-    // --- StrongSight Colors ---
+    // StrongSight Colors
     const ivory = Color(0xFFF3EBD3);
     const espresso = Color(0xFF12110F);
     const lightModeGreen = Color(0xFF094941);
@@ -45,13 +45,12 @@ class _CalendarPageState extends State<CalendarPage> {
     return Scaffold(
       backgroundColor: bgColor,
 
-      // ---------- App Bar ----------
       appBar: AppBar(
-        backgroundColor: ivory, // Always ivory
+        backgroundColor: ivory,
         title: const Text(
           'Workout Calendar',
           style: TextStyle(
-            color: lightModeGreen, // Always dark green for the title
+            color: lightModeGreen,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -59,14 +58,13 @@ class _CalendarPageState extends State<CalendarPage> {
         iconTheme: const IconThemeData(color: lightModeGreen),
       ),
 
-      // ---------- Body ----------
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.only(bottom: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- Calendar Container ---
+              // ------------------ CALENDAR ------------------
               Container(
                 margin: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -87,6 +85,55 @@ class _CalendarPageState extends State<CalendarPage> {
                   focusedDay: _focusedDay,
                   selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
                   eventLoader: _getEventsForDay,
+
+                  // ---------- LOGO DAY BUILDER ----------
+                  calendarBuilders: CalendarBuilders(
+                    defaultBuilder: (context, day, focusedDay) {
+                      final events = _getEventsForDay(day);
+                      final hasWorkout = events.isNotEmpty;
+
+                      return _buildCalendarDay(
+                        dayNumber: day.day,
+                        isWorkout: hasWorkout,
+                        textColor: textColor,
+                      );
+                    },
+
+                    todayBuilder: (context, day, focusedDay) {
+                      final events = _getEventsForDay(day);
+                      final hasWorkout = events.isNotEmpty;
+
+                      return Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: accentColor.withOpacity(0.20),
+                        ),
+                        child: _buildCalendarDay(
+                          dayNumber: day.day,
+                          isWorkout: hasWorkout,
+                          textColor: textColor,
+                        ),
+                      );
+                    },
+
+                    selectedBuilder: (context, day, focusedDay) {
+                      final events = _getEventsForDay(day);
+                      final hasWorkout = events.isNotEmpty;
+
+                      return Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: accentColor,
+                        ),
+                        child: _buildCalendarDay(
+                          dayNumber: day.day,
+                          isWorkout: hasWorkout,
+                          textColor: Colors.white,
+                        ),
+                      );
+                    },
+                  ),
+
                   headerStyle: HeaderStyle(
                     formatButtonVisible: false,
                     titleCentered: true,
@@ -95,33 +142,25 @@ class _CalendarPageState extends State<CalendarPage> {
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
                     ),
-                    leftChevronIcon:
-                        Icon(Icons.chevron_left, color: textColor),
-                    rightChevronIcon:
-                        Icon(Icons.chevron_right, color: textColor),
+                    leftChevronIcon: Icon(Icons.chevron_left, color: textColor),
+                    rightChevronIcon: Icon(Icons.chevron_right, color: textColor),
                   ),
+
                   daysOfWeekStyle: DaysOfWeekStyle(
                     weekdayStyle: TextStyle(color: subTextColor),
                     weekendStyle: TextStyle(color: subTextColor),
                   ),
+
                   calendarStyle: CalendarStyle(
                     outsideDaysVisible: false,
                     defaultTextStyle: TextStyle(color: textColor),
                     weekendTextStyle: TextStyle(color: textColor),
-                    todayDecoration: BoxDecoration(
-                      color: accentColor.withOpacity(0.3),
-                      shape: BoxShape.circle,
-                    ),
-                    selectedDecoration: BoxDecoration(
-                      color: accentColor,
-                      shape: BoxShape.circle,
-                    ),
-                    markerDecoration: BoxDecoration(
-                      color: accentColor.withOpacity(0.8),
-                      shape: BoxShape.circle,
-                    ),
                     todayTextStyle: TextStyle(color: textColor),
+                    //Removes the black dot on worked out days(logos for that already implemented)
+                    markersAutoAligned: false,
+                    markersMaxCount: 0,
                   ),
+
                   onDaySelected: (selectedDay, focusedDay) {
                     setState(() {
                       _selectedDay = selectedDay;
@@ -131,7 +170,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 ),
               ),
 
-              // --- Event List Section ---
+              // ------------------ EVENT LIST ------------------
               Container(
                 padding: const EdgeInsets.all(16),
                 width: double.infinity,
@@ -154,7 +193,7 @@ class _CalendarPageState extends State<CalendarPage> {
                     Text(
                       "Your Workouts",
                       style: TextStyle(
-                        color: textColor, // Matches the month text color dynamically
+                        color: textColor,
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -175,43 +214,45 @@ class _CalendarPageState extends State<CalendarPage> {
                             ),
                           )
                         : Column(
-                            children:
-                                _getEventsForDay(_selectedDay ?? _focusedDay)
-                                    .map(
-                                      (event) => Container(
-                                        margin: const EdgeInsets.symmetric(
-                                            vertical: 6),
-                                        padding: const EdgeInsets.all(14),
-                                        decoration: BoxDecoration(
-                                          color: isDark
-                                              ? espresso
-                                              : const Color(0xFFFCF5E3),
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                          border: Border.all(
-                                            color: accentColor,
-                                            width: 1.2,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              event,
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w600,
-                                                color: textColor,
-                                              ),
-                                            ),
-                                            Icon(Icons.check_circle_outline,
-                                                color: accentColor),
-                                          ],
+                            children: _getEventsForDay(
+                              _selectedDay ?? _focusedDay,
+                            ).map(
+                              (event) {
+                                return Container(
+                                  margin:
+                                      const EdgeInsets.symmetric(vertical: 6),
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? espresso
+                                        : const Color(0xFFFCF5E3),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: accentColor,
+                                      width: 1.2,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        event,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: textColor,
                                         ),
                                       ),
-                                    )
-                                    .toList(),
+                                      Icon(
+                                        Icons.check_circle_outline,
+                                        color: accentColor,
+                                      )
+                                    ],
+                                  ),
+                                );
+                              },
+                            ).toList(),
                           ),
                   ],
                 ),
@@ -219,6 +260,39 @@ class _CalendarPageState extends State<CalendarPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // ------------------ CUSTOM DAY CELL ------------------
+  Widget _buildCalendarDay({
+    required int dayNumber,
+    required bool isWorkout,
+    required Color textColor,
+  }) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            "$dayNumber",
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: textColor,
+            ),
+          ),
+
+          const SizedBox(height: 4),
+
+          Image.asset(
+            isWorkout
+                ? "assets/images/OpenEyeLogo.png"
+                : "assets/images/ClosedEyeLogo.png",
+            width: 22,
+            height: 22,
+          ),
+        ],
       ),
     );
   }

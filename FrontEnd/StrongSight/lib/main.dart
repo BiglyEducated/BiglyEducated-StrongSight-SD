@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
-import 'providers/theme_provider.dart'; 
+import 'providers/theme_provider.dart';
 import 'pages/login_page.dart';
 import 'pages/home_page.dart';
 import 'pages/register_page.dart';
@@ -11,9 +10,32 @@ import 'pages/profile_page.dart';
 import 'pages/workout_page.dart';
 import 'pages/exercises_page.dart';
 import 'pages/main_page.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'dart:ui' as ui;
+
+Future<void> verifyAssets() async {
+  final assets = [
+    'assets/images/logo.png',
+    'assets/images/Deadlift.png',
+    'assets/images/Squat.png',
+  ];
+
+  for (final path in assets) {
+    try {
+      final data = await rootBundle.load(path);
+      await ui.instantiateImageCodec(data.buffer.asUint8List());
+      print('✅ $path loaded fine');
+    } catch (e) {
+      print('❌ $path failed: $e');
+    }
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await verifyAssets();
+
+  // 🔹 Wrap your entire app in ChangeNotifierProvider here
   runApp(
     ChangeNotifierProvider(
       create: (_) => ThemeProvider(),
@@ -32,9 +54,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'StrongSight',
       debugShowCheckedModeBanner: false,
-      themeMode: themeProvider.currentTheme, 
+      themeMode: themeProvider.currentTheme,
 
-      //LIGHT THEME
+      // LIGHT THEME
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.light,
@@ -58,19 +80,21 @@ class MyApp extends StatelessWidget {
             backgroundColor: const Color(0xFF094941),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
-            textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            textStyle:
+                const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           ),
         ),
       ),
 
-      //DARK THEME
+      // DARK THEME
       darkTheme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF094941), //Logo green
-          secondary: Color(0xFF748067), //subtle muted olive
+          primary: Color(0xFF094941),
+          secondary: Color(0xFF748067),
         ),
         scaffoldBackgroundColor: const Color(0xFF0B0F14),
         appBarTheme: const AppBarTheme(
@@ -78,28 +102,30 @@ class MyApp extends StatelessWidget {
           elevation: 0,
           centerTitle: true,
           titleTextStyle: TextStyle(
-            color: Color(0xFF039E39), //green text
+            color: Color(0xFF039E39),
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
-          iconTheme: IconThemeData(color: Color(0xFF094941)), 
+          iconTheme: IconThemeData(color: Color(0xFF094941)),
         ),
-        inputDecorationTheme: InputDecorationTheme(
+        inputDecorationTheme: const InputDecorationTheme(
           filled: true,
-          fillColor: const Color(0xFF161C22),
+          fillColor: Color(0xFF161C22),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(14)),
             borderSide: BorderSide.none,
           ),
-          labelStyle: const TextStyle(color: Color(0xFF748067)),
+          labelStyle: TextStyle(color: Color(0xFF748067)),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF039E39), // Green button
-            foregroundColor: const Color(0xFFFCF5E3), // cream text
+            backgroundColor: const Color(0xFF039E39),
+            foregroundColor: const Color(0xFFFCF5E3),
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
-            textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            textStyle:
+                const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           ),
         ),
         floatingActionButtonTheme: const FloatingActionButtonThemeData(
@@ -109,10 +135,10 @@ class MyApp extends StatelessWidget {
         cardColor: const Color(0xFF10161B),
       ),
 
-
-      initialRoute: kDebugMode ? '/home' : '/',
+      initialRoute: '/splash',
       routes: {
         '/': (context) => const LoginPage(),
+        '/splash': (context) => const SplashScreen(),
         '/home': (context) => const MainPage(),
         '/register': (context) => const RegisterPage(),
         '/calendar': (context) => const CalendarPage(),

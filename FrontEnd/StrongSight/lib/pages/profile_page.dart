@@ -137,21 +137,31 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   // ---------- SETTINGS ----------
-  Widget _buildSettingsCard(ThemeProvider themeProvider, Color cardColor, Color textColor, Color accentColor, Color subTextColor) {
-    return Container(
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+  Widget _buildSettingsCard(
+  ThemeProvider themeProvider,
+  Color cardColor,
+  Color textColor,
+  Color accentColor,
+  Color subTextColor,
+) {
+  return Container(
+    decoration: BoxDecoration(
+      color: cardColor,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 8,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // --- Notifications ---
           SwitchListTile(
             activeColor: accentColor,
             title: Text("Notifications", style: TextStyle(color: subTextColor)),
@@ -159,6 +169,8 @@ class _ProfilePageState extends State<ProfilePage> {
             onChanged: (val) => setState(() => _notificationsEnabled = val),
           ),
           Divider(color: Colors.grey.withOpacity(0.3), height: 0),
+
+          // --- App Sounds ---
           SwitchListTile(
             activeColor: accentColor,
             title: Text("App Sounds", style: TextStyle(color: subTextColor)),
@@ -166,16 +178,202 @@ class _ProfilePageState extends State<ProfilePage> {
             onChanged: (val) => setState(() => _soundEnabled = val),
           ),
           Divider(color: Colors.grey.withOpacity(0.3), height: 0),
+
+          // --- Dark Mode ---
           SwitchListTile(
             title: Text("Dark Mode", style: TextStyle(color: subTextColor)),
             activeColor: accentColor,
             value: themeProvider.isDarkMode,
             onChanged: (value) => themeProvider.toggleTheme(value),
           ),
+          const SizedBox(height: 16),
+
+          // --- Edit Profile Button ---
+          ElevatedButton.icon(
+            icon: const Icon(Icons.edit, size: 20),
+            label: const Text("Edit Profile", style: TextStyle(fontSize: 16)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accentColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () {
+              _showEditProfileSheet(
+                  context, cardColor, textColor, accentColor, subTextColor);
+            },
+          ),
+          const SizedBox(height: 12),
+
+          // --- Delete Profile Button ---
+          ElevatedButton.icon(
+            icon: const Icon(Icons.delete_outline, size: 20),
+            label: const Text("Delete Profile", style: TextStyle(fontSize: 16)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text("Delete Profile?"),
+                  content: const Text(
+                    "This action cannot be undone. Are you sure you want to delete your profile?",
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Cancel"),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Profile deleted (placeholder)."),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        "Delete",
+                        style: TextStyle(color: Colors.redAccent),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ],
+      ),
+    ),
+  );
+}
+
+
+  void _showEditProfileSheet(BuildContext context, Color cardColor, Color textColor,
+      Color accentColor, Color subTextColor) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    height: 5,
+                    width: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: Text(
+                    "Edit Profile",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // --- Input Fields ---
+                _buildTextField("Full Name", "Yoendry Ferro", textColor, subTextColor, accentColor),
+                _buildTextField("Email", "yoendry@example.com", textColor, subTextColor, accentColor),
+                Row(
+                  children: [
+                    Expanded(child: _buildTextField("Height", "5'10\"", textColor, subTextColor, accentColor)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildTextField("Weight", "160 lbs", textColor, subTextColor, accentColor)),
+                  ],
+                ),
+                _buildTextField("Goal", "Muscle Gain", textColor, subTextColor, accentColor),
+
+                const SizedBox(height: 25),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentColor,
+                      foregroundColor: const Color(0xFFF3EBD3),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Profile updated successfully.")),
+                      );
+                    },
+                    child: const Text(
+                      "Save Changes",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTextField(String label, String value, Color textColor,
+      Color subTextColor, Color accentColor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: TextField(
+        style: TextStyle(color: textColor),
+        cursorColor: accentColor,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(color: subTextColor),
+          hintText: value,
+          hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: subTextColor.withOpacity(0.3)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: accentColor, width: 1.5),
+          ),
+          filled: true,
+          fillColor: Colors.transparent,
+        ),
       ),
     );
   }
+
+
 
   Widget _buildSectionTitle(String title, Color textColor) {
     return Text(

@@ -65,6 +65,7 @@ flutter:
   assets:
     - assets/images/
     - assets/models/pose_landmarker_lite.tflite
+    - assets/videos/SplashScreen.json
 
 
   # To add assets to your application, add an assets section, like this:
