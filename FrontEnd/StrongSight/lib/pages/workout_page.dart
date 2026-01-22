@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
+import 'camera_workout_page.dart';  
 
 class WorkoutPage extends StatefulWidget {
   const WorkoutPage({super.key});
@@ -21,14 +25,23 @@ class _WorkoutPageState extends State<WorkoutPage> {
     "Bicep Curls",
   ];
 
-  void _startRecording() {
-    setState(() {
-      _isRecording = true;
-    });
+  void _startRecording() async {
+    if (_selectedExercise == null) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Camera starting... (placeholder)")),
+    final repsCompleted = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CameraWorkoutPage(
+          exerciseName: _selectedExercise!,
+        ),
+      ),
     );
+
+    if (repsCompleted != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Workout completed! $repsCompleted reps")),
+      );
+    }
   }
 
   @override
