@@ -2,6 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 
+
+
+///-----------MODELS -----------///
+class PlannedExercise {
+  final String name;
+  final int sets;
+  final int reps;
+  final double weight;
+
+  PlannedExercise({
+    required this.name,
+    required this.sets,
+    required this.reps,
+    required this.weight,
+  });
+}
+
+
+class Workout{
+  final String workoutName;
+  final List<PlannedExercise> exercises;
+  Workout({
+    required this.workoutName,
+    required this.exercises,
+  });
+}
+
 class ExercisesPage extends StatefulWidget {
   const ExercisesPage({super.key});
 
@@ -11,8 +38,176 @@ class ExercisesPage extends StatefulWidget {
 
 class _ExercisesPageState extends State<ExercisesPage> {
   final TextEditingController _searchController = TextEditingController();
+  final Set<String> _pinnedExercises = {};
   String _searchQuery = "";
   Set<String> _selectedMuscles = {};
+
+  //Exercise Card Builder
+  Widget _buildExerciseCard({
+  required String name,
+  required String image,
+  required String muscles,
+  required String equipment,
+  required List<String> form,
+  String? stats,
+  bool pinnable = false,
+}) {
+  final isDark =
+      Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
+
+  final cardColor = isDark ? const Color(0xFF1A1917) : Colors.white;
+  final textColor =
+      isDark ? const Color(0xFF039E39) : const Color(0xFF094941);
+  final subTextColor =
+      isDark ? const Color(0xFFD9CBB8) : Colors.grey[700]!;
+  final accentColor = textColor;
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 18),
+    decoration: BoxDecoration(
+      color: cardColor,
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: ExpansionTile(
+      collapsedBackgroundColor: cardColor,
+      backgroundColor: cardColor,
+      title: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              color: isDark
+                  ? const Color(0xFF12110F)
+                  : const Color(0xFFEDE6D1),
+            ),
+            child: Image.asset(image, fit: BoxFit.contain),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              name,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
+          ),
+          if (pinnable)
+            IconButton(
+              icon: Icon(
+                _isPinned(name) ? Icons.push_pin : Icons.push_pin_outlined,
+                color: accentColor,
+              ),
+              onPressed: () => _togglePin(name),
+            ),
+        ],
+      ),
+      childrenPadding:
+          const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      children: [
+        if (stats != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              stats,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: subTextColor,
+              ),
+            ),
+          ),
+        _buildInfoRow("Muscles Worked:", muscles, textColor, subTextColor),
+        _buildInfoRow("Equipment:", equipment, textColor, subTextColor),
+        const SizedBox(height: 8),
+        Text(
+          "Proper Form:",
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: textColor,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: form.map((step) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("• ",
+                      style: TextStyle(
+                        color: accentColor,
+                        fontSize: 15,
+                      )),
+                  Expanded(
+                    child: Text(
+                      step,
+                      style: TextStyle(
+                        color: subTextColor,
+                        fontSize: 15,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    ),
+  );
+}
+
+  // Finds exercise details by name
+  Map<String, dynamic>? _findExerciseDetails(String name) {
+  return _exercises.firstWhere(
+    (ex) => ex["name"] == name,
+    orElse: () => {},
+  );
+}
+
+
+// Pinning Functionality
+bool _isPinned(String exerciseName) {
+  return _pinnedExercises.contains(exerciseName);
+}
+
+void _togglePin(String exerciseName) {
+  setState(() {
+    if (_isPinned(exerciseName)) {
+      _pinnedExercises.remove(exerciseName);
+    } else {
+      _pinnedExercises.add(exerciseName);
+    }
+  });
+}
+
+// Get pinned exercise cards
+List<Map<String, dynamic>> get _pinnedExerciseCards {
+  return _exercises
+      .where((ex) => _pinnedExercises.contains(ex["name"]))
+      .toList();
+}
+
+
+
+  //Todays workout(REPLACE WITH API DATA)
+  final Workout? todaysWorkout = Workout(
+    workoutName: "Leetcode Session",
+    exercises: [
+      PlannedExercise(name: "Squat", sets: 1, reps: 1, weight: 0),
+      PlannedExercise(name: "Bench Press", sets: 1, reps: 1, weight: 0),
+      PlannedExercise(name: "Bicep Curls", sets: 1, reps: 1, weight: 0),
+    ],
+  );
+
+  //Exercise Library
 
   final List<Map<String, dynamic>> _exercises = [
     {
@@ -239,6 +434,7 @@ class _ExercisesPageState extends State<ExercisesPage> {
   }
   ];
 
+  //Gets the muscle groups from the exercise list
   List<String> get _muscleGroups {
   final muscles = _exercises
       .expand((e) => (e["muscles"] as String)
@@ -246,13 +442,13 @@ class _ExercisesPageState extends State<ExercisesPage> {
           .map((m) => m.trim()))
       .toSet()
       .toList()
-      .cast<String>(); // ensures List<String>
+      .cast<String>(); 
 
   muscles.sort();
   return muscles;
 }
 
-
+  // Filters exercises based on search query and selected muscles
   List<Map<String, dynamic>> get _filteredExercises {
     final query = _searchQuery.toLowerCase();
     return _exercises.where((ex) {
@@ -270,6 +466,7 @@ class _ExercisesPageState extends State<ExercisesPage> {
     }).toList();
   }
 
+  //--- UI BUILD METHOD ---
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -302,8 +499,67 @@ class _ExercisesPageState extends State<ExercisesPage> {
         centerTitle: true,
         iconTheme: const IconThemeData(color: lightModeGreen),
       ),
-      body: Column(
+      body: ListView(
+        padding: EdgeInsets.zero,
+        //--- Todays Workout Section ---
         children: [
+          if (todaysWorkout != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    if (!isDark)
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 6,
+                        offset: const Offset(0, 4),
+                      ),
+                  ],
+                ),
+                child: ExpansionTile(
+                  collapsedBackgroundColor: cardColor,
+                  backgroundColor: cardColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  title: Text(
+                    "Today's Workout · ${todaysWorkout!.workoutName}",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  children: todaysWorkout!.exercises.map((planned) {
+                    final details = _findExerciseDetails(planned.name);
+                    if (details == null || details.isEmpty) {
+                      return const SizedBox();
+                    }
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _buildExerciseCard(
+              name: planned.name,
+              image: details["image"],
+              muscles: details["muscles"],
+              equipment: details["equipment"],
+              form: List<String>.from(details["form"]),
+              stats:
+                  "${planned.sets} × ${planned.reps} @ ${planned.weight} lbs",
+            ),
+          );
+        }).toList(),
+      ),
+    ),
+  ),
+
+
+          const SizedBox(height: 8),
+          const Divider(),
           // --- Search Bar ---
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -329,6 +585,36 @@ class _ExercisesPageState extends State<ExercisesPage> {
               ),
             ),
           ),
+
+          // --- Pinned Exercises ---
+          if (_searchQuery.isEmpty && _pinnedExerciseCards.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Text(
+                "Pinned Exercises",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
+            ),
+
+          if (_searchQuery.isEmpty)
+            ..._pinnedExerciseCards.map((ex) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _buildExerciseCard(
+                  name: ex["name"],
+                  image: ex["image"],
+                  muscles: ex["muscles"],
+                  equipment: ex["equipment"],
+                  form: List<String>.from(ex["form"]),
+                  pinnable: true,
+                ),
+              );
+            }).toList(),
+
 
           // --- Muscle Filter Chips ---
           Container(
@@ -371,116 +657,35 @@ class _ExercisesPageState extends State<ExercisesPage> {
           const SizedBox(height: 12),
 
           // --- Exercise List ---
-          Expanded(
-            child: _filteredExercises.isEmpty
-                ? Center(
-                    child: Text("No exercises found.",
-                        style: TextStyle(color: subTextColor, fontSize: 16)),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _filteredExercises.length,
-                    itemBuilder: (context, index) {
-                      final ex = _filteredExercises[index];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 18),
-                        decoration: BoxDecoration(
-                          color: cardColor,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            if (!isDark)
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 6,
-                                offset: const Offset(0, 4),
-                              ),
-                          ],
-                        ),
-                        child: ExpansionTile(
-                          collapsedBackgroundColor: cardColor,
-                          backgroundColor: cardColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          title: Row(
-                            children: [
-                              Container(
-                                width: 60,
-                                height: 60,
-                                decoration: BoxDecoration(
-                                  color: isDark ? espresso : const Color(0xFFEDE6D1),
-                                  borderRadius: BorderRadius.circular(10),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                padding: const EdgeInsets.all(6),
-                                child: Image.asset(ex["image"], fit: BoxFit.contain),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Text(
-                                  ex["name"],
-                                  style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: textColor),
-                                ),
-                              ),
-                            ],
-                          ),
-                          childrenPadding:
-                              const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                          children: [
-                            _buildInfoRow("Muscles Worked:", ex["muscles"], textColor, subTextColor),
-                            _buildInfoRow("Equipment:", ex["equipment"], textColor, subTextColor),
-                            const SizedBox(height: 8),
-                            Text("Proper Form:",
-                                style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: textColor)),
-                            const SizedBox(height: 4),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: (ex["form"] as List<String>).map((step) {
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 2),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text("• ",
-                                          style: TextStyle(
-                                              color: accentColor.withOpacity(0.8),
-                                              fontSize: 15,
-                                              height: 1.4)),
-                                      Expanded(
-                                        child: Text(step,
-                                            style: TextStyle(
-                                                color: subTextColor,
-                                                fontSize: 15,
-                                                height: 1.4)),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                            const SizedBox(height: 12),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
+          // --- Exercise List ---
+          if (_filteredExercises.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Center(
+                child: Text(
+                  "No exercises found.",
+                  style: TextStyle(color: subTextColor, fontSize: 16),
+                ),
+              ),
+            )
+          else
+            ..._filteredExercises.map((ex) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _buildExerciseCard(
+                  name: ex["name"],
+                  image: ex["image"],
+                  muscles: ex["muscles"],
+                  equipment: ex["equipment"],
+                  form: List<String>.from(ex["form"]),
+                  pinnable: true,
+                ),
+              );
+            }).toList(),
+                  ],
+                ),
+              );
+            }
 
   Widget _buildInfoRow(
       String label, String value, Color textColor, Color subTextColor) {
