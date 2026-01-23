@@ -3,6 +3,7 @@ import admin from "firebase-admin";
 import { readFileSync } from "fs";
 import authRoutes from "./routes/authRoutes.js";
 import { db } from "./config/firebase.js";
+import cors from "cors";
 
 const serviceAccount = JSON.parse(readFileSync("./serviceAccountKey.json", "utf8"));
 const app = express();
@@ -10,6 +11,12 @@ const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Enable CORS for all routes
+app.use(cors({
+  origin: '*',  // Allow all origins (dev only)
+  credentials: false,
+}));
 
 
 app.get("/test-firebase", async (req, res) => {
