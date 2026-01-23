@@ -106,8 +106,6 @@ class _HomePageState extends State<HomePage>
   ];
 
   // --------------------- WEEKLY STREAK LOGIC ---------------------------------------------
-
-  //Convert "Nov 4" → DateTime
   DateTime _parseWorkoutDate(String dateString) {
     final parts = dateString.split(" ");
     final monthStr = parts[0];
