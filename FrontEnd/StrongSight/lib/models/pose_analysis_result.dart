@@ -22,7 +22,6 @@ class PoseAnalysisResult {
     this.formErrorMessage,
   });
 
-  /// Create an invalid result (when pose can't be analyzed)
   factory PoseAnalysisResult.invalid(String reason) {
     return PoseAnalysisResult(
       isValid: false,
@@ -33,7 +32,6 @@ class PoseAnalysisResult {
     );
   }
 
-  /// Create a valid result from rep counter and form checker
   factory PoseAnalysisResult.fromAnalysis({
     required int count,
     required ExerciseState state,
@@ -41,11 +39,9 @@ class PoseAnalysisResult {
     required double angle,
     bool hasFormError = false,
     String? formErrorMessage,
+    String? exerciseName,
   }) {
-    // Determine phase string from state
-    String phase = _getPhaseString(state);
-
-    // Use form error message if present, otherwise use rep counter feedback
+    String phase = _getPhaseString(state, exerciseName);
     String feedback = hasFormError && formErrorMessage != null
         ? formErrorMessage
         : feedbackMessage;
@@ -62,20 +58,48 @@ class PoseAnalysisResult {
     );
   }
 
-  static String _getPhaseString(ExerciseState state) {
+  static String _getPhaseString(ExerciseState state, String? exerciseName) {
+    final isBench = exerciseName?.toLowerCase().contains('bench') ?? false;
+    final isSquat = exerciseName?.toLowerCase().contains('squat') ?? false;
+    final isRow = exerciseName?.toLowerCase().contains('row') ?? false;
+    final isOverhead = exerciseName?.toLowerCase().contains('overhead') ?? false;
+    final isDeadlift = exerciseName?.toLowerCase().contains('deadlift') ?? false;
+
     switch (state) {
       case ExerciseState.standing:
-        return 'standing';
+        if (isBench) return 'locked out';
+        if (isSquat) return 'standing';
+        if (isRow) return 'arms extended';
+        if (isOverhead) return 'overhead lockout';
+        if (isDeadlift) return 'standing upright';
+        return 'ready';
+        
       case ExerciseState.descent:
-        return 'descending';
+        if (isBench) return 'lowering bar';
+        if (isSquat) return 'descending';
+        if (isRow) return 'pulling';
+        if (isOverhead) return 'lowering';
+        if (isDeadlift) return 'lowering bar';
+        return 'lowering';
+        
       case ExerciseState.bottom:
-        return 'parallel';
+        if (isBench) return 'bar at chest';
+        if (isSquat) return 'parallel';
+        if (isRow) return 'bar to torso';
+        if (isOverhead) return 'bar at shoulders';
+        if (isDeadlift) return 'bar at floor';
+        return 'bottom';
+        
       case ExerciseState.ascending:
-        return 'ascending';
+        if (isBench) return 'pressing up';
+        if (isSquat) return 'ascending';
+        if (isRow) return 'extending';
+        if (isOverhead) return 'pressing overhead';
+        if (isDeadlift) return 'lifting';
+        return 'rising';
     }
   }
 
-  /// Convert to map for legacy compatibility
   Map<String, dynamic> toMap() {
     return {
       'isValid': isValid,

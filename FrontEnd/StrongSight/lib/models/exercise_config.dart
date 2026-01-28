@@ -41,8 +41,8 @@ class ExerciseLibrary {
       vertexJoint: PoseLandmarkType.leftKnee,
       pointA: PoseLandmarkType.leftHip,
       pointB: PoseLandmarkType.leftAnkle,
-      standingThreshold: 170.0, // Adjusted per practical testing (Section 6.4.1)
-      bottomThreshold: 95.0,   // Good squat depth (Section 6.4.1)
+      standingThreshold: 170.0,
+      bottomThreshold: 95.0,
       optimalAngle: "Front",
       cameraHeight: "Chest Height",
     ),
@@ -51,8 +51,18 @@ class ExerciseLibrary {
       vertexJoint: PoseLandmarkType.leftElbow,
       pointA: PoseLandmarkType.leftShoulder,
       pointB: PoseLandmarkType.leftWrist,
-      standingThreshold: 175.0, // Fully locked out (Section 6.1.3)
-      bottomThreshold: 65.0,    // Elbow-to-torso angle (Section 6.1.3)
+      standingThreshold: 165.0,
+      bottomThreshold: 70.0,
+      optimalAngle: "Side (45°)",
+      cameraHeight: "Bench Height",
+    ),
+    'bench press': ExerciseConfig(
+      name: "Bench Press",
+      vertexJoint: PoseLandmarkType.leftElbow,
+      pointA: PoseLandmarkType.leftShoulder,
+      pointB: PoseLandmarkType.leftWrist,
+      standingThreshold: 165.0,
+      bottomThreshold: 70.0,
       optimalAngle: "Side (45°)",
       cameraHeight: "Bench Height",
     ),
@@ -61,8 +71,8 @@ class ExerciseLibrary {
       vertexJoint: PoseLandmarkType.leftHip,
       pointA: PoseLandmarkType.leftShoulder,
       pointB: PoseLandmarkType.leftKnee,
-      standingThreshold: 175.0, // Fully standing upright (Section 6.1.4)
-      bottomThreshold: 115.0,   // Midpoint of 100-130 range (Section 6.1.4)
+      standingThreshold: 165.0, // Reduced from 175 - easier lockout
+      bottomThreshold: 120.0,   // Increased from 115 - easier starting position
       optimalAngle: "Side (90°)",
       cameraHeight: "Hip Height",
     ),
@@ -71,8 +81,18 @@ class ExerciseLibrary {
       vertexJoint: PoseLandmarkType.leftElbow,
       pointA: PoseLandmarkType.leftShoulder,
       pointB: PoseLandmarkType.leftWrist,
-      standingThreshold: 175.0, // Arms extended (Section 6.1.5)
-      bottomThreshold: 85.0,    // Elbow flex 70-100 range (Section 6.1.5)
+      standingThreshold: 150.0,
+      bottomThreshold: 75.0,
+      optimalAngle: "Side (90°)",
+      cameraHeight: "Waist Height",
+    ),
+    'barbell row': ExerciseConfig(
+      name: "Barbell Row",
+      vertexJoint: PoseLandmarkType.leftElbow,
+      pointA: PoseLandmarkType.leftShoulder,
+      pointB: PoseLandmarkType.leftWrist,
+      standingThreshold: 150.0,
+      bottomThreshold: 75.0,
       optimalAngle: "Side (90°)",
       cameraHeight: "Waist Height",
     ),
@@ -81,8 +101,28 @@ class ExerciseLibrary {
       vertexJoint: PoseLandmarkType.leftElbow,
       pointA: PoseLandmarkType.leftShoulder,
       pointB: PoseLandmarkType.leftWrist,
-      standingThreshold: 175.0, // Arms locked overhead (Section 6.1.6)
-      bottomThreshold: 10.0,    // Elbows 5-15 forward of bar (Section 6.1.6)
+      standingThreshold: 140.0,
+      bottomThreshold: 100.0,
+      optimalAngle: "Front",
+      cameraHeight: "Chest Height",
+    ),
+    'overhead press': ExerciseConfig(
+      name: "Overhead Press",
+      vertexJoint: PoseLandmarkType.leftElbow,
+      pointA: PoseLandmarkType.leftShoulder,
+      pointB: PoseLandmarkType.leftWrist,
+      standingThreshold: 140.0,
+      bottomThreshold: 100.0,
+      optimalAngle: "Front",
+      cameraHeight: "Chest Height",
+    ),
+    'bicep curls': ExerciseConfig(
+      name: "Bicep Curls",
+      vertexJoint: PoseLandmarkType.leftElbow,
+      pointA: PoseLandmarkType.leftShoulder,
+      pointB: PoseLandmarkType.leftWrist,
+      standingThreshold: 175.0,
+      bottomThreshold: 45.0,
       optimalAngle: "Front",
       cameraHeight: "Chest Height",
     ),

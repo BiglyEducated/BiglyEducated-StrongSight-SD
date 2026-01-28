@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/theme_provider.dart';
 import 'camera_workout_page.dart';  
 
 class WorkoutPage extends StatefulWidget {
@@ -21,6 +18,8 @@ class _WorkoutPageState extends State<WorkoutPage> {
   final List<String> _exerciseList = [
     "Squat",
     "Bench Press",
+    "Barbell Row",
+    "Overhead Press",
     "Deadlift",
     "Bicep Curls",
   ];

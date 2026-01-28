@@ -8,19 +8,17 @@ import '../models/exercise_config.dart';
 import '../models/pose_analysis_result.dart';
 
 /// Service for pose detection and exercise analysis
-/// Coordinates between ML Kit, RepCounter, and FormChecker
 class PoseDetectorService {
   late PoseDetector _poseDetector;
   RepCounter? _repCounter;
   final FormChecker _formChecker = FormChecker();
   bool _isInitialized = false;
+  String? _currentExercise;
 
   bool get isInitialized => _isInitialized;
 
-  /// Initialize the pose detector with ML Kit
   Future<void> initialize() async {
     if (_isInitialized) return;
-    
     _poseDetector = PoseDetector(
       options: PoseDetectorOptions(
         mode: PoseDetectionMode.stream,
@@ -30,33 +28,34 @@ class PoseDetectorService {
     _isInitialized = true;
   }
 
-  /// Set the current exercise being performed
   void setExercise(String exerciseName) {
-    final config = ExerciseLibrary.configs[exerciseName.toLowerCase()];
+    print('setExercise: "$exerciseName"');
+    final key = exerciseName.toLowerCase();
+    print('Looking for: "$key"');
+    final config = ExerciseLibrary.configs[key];
     if (config != null) {
+      print('Found: ${config.name}');
       _repCounter = RepCounter(config);
       _formChecker.reset();
+      _currentExercise = key;
+    } else {
+      print('NOT FOUND. Available: ${ExerciseLibrary.configs.keys}');
     }
   }
 
-  /// Detect poses from camera image
-  Future<List<Pose>> detectPoses(
-    CameraImage image,
-    InputImageRotation rotation,
-  ) async {
-    if (!_isInitialized) {
-      throw Exception('PoseDetectorService not initialized');
-    }
-
+  Future<List<Pose>> detectPoses(CameraImage image, InputImageRotation rotation) async {
+    if (!_isInitialized) throw Exception('Not initialized');
     final inputImage = _inputImageFromCameraImage(image, rotation);
     if (inputImage == null) return [];
-
     return await _poseDetector.processImage(inputImage);
   }
 
-  /// Analyze squat form and return structured result
-  PoseAnalysisResult analyzeSquatForm(Pose pose) {
-    if (_repCounter == null) {
+  PoseAnalysisResult analyzeSquatForm(Pose pose) => _analyzeExerciseForm(pose);
+  PoseAnalysisResult analyzeBenchForm(Pose pose) => _analyzeExerciseForm(pose);
+
+  PoseAnalysisResult _analyzeExerciseForm(Pose pose) {
+    if (_repCounter == null || _currentExercise == null) {
+      print('ERROR: repCounter=${_repCounter == null}, exercise=$_currentExercise');
       return PoseAnalysisResult.invalid('No exercise selected');
     }
 
@@ -65,32 +64,32 @@ class PoseDetectorService {
     final pointA = pose.landmarks[config.pointA];
     final pointB = pose.landmarks[config.pointB];
 
-    // Check tracking confidence
-    final confidenceCheck = _formChecker.checkTrackingConfidence(
-      vertex,
-      pointA,
-      pointB,
-    );
-
+    final confidenceCheck = _formChecker.checkTrackingConfidence(vertex, pointA, pointB);
     if (confidenceCheck.hasError) {
-      return PoseAnalysisResult.invalid(
-        confidenceCheck.errorMessage ?? 'Low tracking confidence',
-      );
+      return PoseAnalysisResult.invalid(confidenceCheck.errorMessage ?? 'Low confidence');
     }
 
-    // Calculate knee angle
     final angle = AngleCalculator.calculateAngle(pointA!, vertex!, pointB!);
-
-    // Update rep counter
     _repCounter!.update(angle);
 
-    // Check ALL form errors (knee cave, back arch, symmetry)
-    final formCheck = _formChecker.checkAllSquatForm(
-      pose,
-      _repCounter!.currentState,
-    );
+    FormCheckResult formCheck;
+    if (_currentExercise == 'squat') {
+      formCheck = _formChecker.checkAllSquatForm(pose, _repCounter!.currentState);
+    } else if (_currentExercise == 'bench' || _currentExercise == 'bench press') {
+      formCheck = _formChecker.checkAllBenchForm(pose, _repCounter!.currentState);
+    } else if (_currentExercise == 'row' || _currentExercise == 'barbell row') {
+      // Rows use symmetry check only
+      formCheck = _formChecker.checkBenchSymmetry(pose, _repCounter!.currentState);
+    } else if (_currentExercise == 'overhead' || _currentExercise == 'overhead press') {
+      // Overhead press uses symmetry check ONLY (no elbow flare)
+      formCheck = _formChecker.checkBenchSymmetry(pose, _repCounter!.currentState);
+    } else if (_currentExercise == 'deadlift') {
+      // Deadlift uses back rounding and symmetry checks
+      formCheck = _formChecker.checkAllDeadliftForm(pose, _repCounter!.currentState);
+    } else {
+      formCheck = FormCheckResult(hasError: false);
+    }
 
-    // Build result
     return PoseAnalysisResult.fromAnalysis(
       count: _repCounter!.count,
       state: _repCounter!.currentState,
@@ -98,19 +97,14 @@ class PoseDetectorService {
       angle: angle,
       hasFormError: formCheck.hasError,
       formErrorMessage: formCheck.errorMessage,
+      exerciseName: config.name,
     );
   }
 
-  /// Convert CameraImage to InputImage for ML Kit
-  InputImage? _inputImageFromCameraImage(
-    CameraImage image,
-    InputImageRotation rotation,
-  ) {
+  InputImage? _inputImageFromCameraImage(CameraImage image, InputImageRotation rotation) {
     final format = InputImageFormatValue.fromRawValue(image.format.raw);
     if (format == null || image.planes.isEmpty) return null;
-
     final plane = image.planes.first;
-
     return InputImage.fromBytes(
       bytes: plane.bytes,
       metadata: InputImageMetadata(
@@ -122,7 +116,6 @@ class PoseDetectorService {
     );
   }
 
-  /// Clean up resources
   void dispose() {
     _poseDetector.close();
   }

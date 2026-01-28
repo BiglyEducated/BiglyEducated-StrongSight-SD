@@ -7,10 +7,11 @@ class RepCounter {
   
   // Tracking Metrics
   double _smoothedAngle = 180.0;
-  final double _emaAlpha = 0.3; // As per doc [cite: 1378]
+  final double _emaAlpha = 0.3;
   double _previousAngle = 180.0;
   int _consecutiveFrames = 0;
-  final int _frameThreshold = 3; // To ensure deliberate movement [cite: 1369]
+  final int _frameThreshold = 2;
+  bool _isInitialized = false;
 
   // Form Feedback
   String feedbackMessage = "Ready? Begin your descent.";
@@ -19,61 +20,117 @@ class RepCounter {
   RepCounter(this.config);
 
   void update(double rawAngle) {
-    // 1. EMA Filter to handle jitter [cite: 388, 1378]
-    _smoothedAngle = (_emaAlpha * rawAngle) + (1 - _emaAlpha) * _smoothedAngle;
+    if (!_isInitialized) {
+      _smoothedAngle = rawAngle;
+      _previousAngle = rawAngle;
+      _isInitialized = true;
+      print('RepCounter initialized: ${config.name}, angle: ${rawAngle.toStringAsFixed(1)}°');
+    }
     
-    // 2. Calculate Velocity (degrees per frame) [cite: 386, 1365]
+    _smoothedAngle = (_emaAlpha * rawAngle) + (1 - _emaAlpha) * _smoothedAngle;
     double velocity = (_smoothedAngle - _previousAngle).abs();
     _previousAngle = _smoothedAngle;
 
-    // 3. State Machine Logic [cite: 1341, 1354]
+    // Debug logging for rows to diagnose issue
+    if (_isRow() && currentState != ExerciseState.standing) {
+      print('Row Debug - State: $currentState, Angle: ${_smoothedAngle.toStringAsFixed(1)}°, '
+            'Velocity: ${velocity.toStringAsFixed(1)}°, Frames: $_consecutiveFrames');
+    }
+
     switch (currentState) {
       case ExerciseState.standing:
         isError = false;
-        if (_smoothedAngle < config.standingThreshold - 5) {
-          _transitionTo(ExerciseState.descent, "Lowering... keep it controlled.");
+        if (_smoothedAngle < config.standingThreshold - 20) {
+          _transitionTo(ExerciseState.descent, _getDescentMessage());
         }
         break;
 
       case ExerciseState.descent:
-        // More lenient bottom detection - increased velocity limit and added depth buffer
-        if (_smoothedAngle <= config.bottomThreshold + 10 && velocity < 8.0) {
+        if (_smoothedAngle <= config.bottomThreshold + 20 && velocity < 15.0) {
           _consecutiveFrames++;
           if (_consecutiveFrames >= _frameThreshold) {
-            _transitionTo(ExerciseState.bottom, "Good depth! Now push up.");
+            _transitionTo(ExerciseState.bottom, _getBottomMessage());
           }
-        } else if (_smoothedAngle > config.standingThreshold) {
-           currentState = ExerciseState.standing; // Reset if they stand back up
+        } else if (_smoothedAngle > config.standingThreshold - 10) {
+           currentState = ExerciseState.standing;
+           _consecutiveFrames = 0;
         } else {
-          // Reset counter if conditions not met
           _consecutiveFrames = 0;
         }
         break;
 
       case ExerciseState.bottom:
-        if (_smoothedAngle > config.bottomThreshold + 5) {
+        if (_smoothedAngle > config.bottomThreshold + 15) {
           _consecutiveFrames++;
           if (_consecutiveFrames >= _frameThreshold) {
-            _transitionTo(ExerciseState.ascending, "Push through!");
+            _transitionTo(ExerciseState.ascending, _getAscendingMessage());
           }
         } else {
-          // Reset counter if not ascending yet
           _consecutiveFrames = 0;
         }
         break;
 
       case ExerciseState.ascending:
-        if (_smoothedAngle >= config.standingThreshold) {
-          count++;
-          _transitionTo(ExerciseState.standing, "Rep Complete! Next one.");
+        if (_smoothedAngle >= config.standingThreshold - 15) {
+          _consecutiveFrames++;
+          if (_consecutiveFrames >= _frameThreshold) {
+            count++;
+            _transitionTo(ExerciseState.standing, _getCompleteMessage());
+          }
+        } else {
+          _consecutiveFrames = 0;
         }
         break;
     }
   }
 
   void _transitionTo(ExerciseState newState, String msg) {
+    print('${config.name} - Transition: $currentState → $newState');
     currentState = newState;
     feedbackMessage = msg;
     _consecutiveFrames = 0;
   }
+
+  // Exercise-specific feedback messages
+  String _getDescentMessage() {
+    if (_isBenchPress()) return "Lowering... control the bar.";
+    if (_isSquat()) return "Lowering... keep it controlled.";
+    if (_isRow()) return "Pulling... squeeze your back!";
+    if (_isOverhead()) return "Lowering... stay tight!";
+    if (_isDeadlift()) return "Lowering... hinge at hips!";
+    return "Lowering... stay controlled.";
+  }
+
+  String _getBottomMessage() {
+    if (_isBenchPress()) return "Bar to chest! Now press up.";
+    if (_isSquat()) return "Good depth! Now push up.";
+    if (_isRow()) return "Bar to torso! Squeeze and hold.";
+    if (_isOverhead()) return "Bar at shoulders! Press up!";
+    if (_isDeadlift()) return "Touch the floor! Now drive up!";
+    return "Bottom position! Now rise.";
+  }
+
+  String _getAscendingMessage() {
+    if (_isBenchPress()) return "Press! Drive through!";
+    if (_isSquat()) return "Push through!";
+    if (_isRow()) return "Extending arms... controlled!";
+    if (_isOverhead()) return "Press! Lock it out!";
+    if (_isDeadlift()) return "Drive! Push the floor!";
+    return "Rising! Keep going.";
+  }
+
+  String _getCompleteMessage() {
+    if (_isBenchPress()) return "Locked out! Next rep.";
+    if (_isSquat()) return "Rep Complete! Next one.";
+    if (_isRow()) return "Full extension! Next rep.";
+    if (_isOverhead()) return "Locked overhead! Next rep.";
+    if (_isDeadlift()) return "Lockout complete! Next rep.";
+    return "Rep Complete! Next one.";
+  }
+
+  bool _isBenchPress() => config.name.toLowerCase().contains('bench');
+  bool _isSquat() => config.name.toLowerCase().contains('squat');
+  bool _isRow() => config.name.toLowerCase().contains('row');
+  bool _isOverhead() => config.name.toLowerCase().contains('overhead');
+  bool _isDeadlift() => config.name.toLowerCase().contains('deadlift');
 }
