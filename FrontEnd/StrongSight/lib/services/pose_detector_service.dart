@@ -7,7 +7,6 @@ import '../logic/angle_calculator.dart';
 import '../models/exercise_config.dart';
 import '../models/pose_analysis_result.dart';
 
-/// Service for pose detection and exercise analysis
 class PoseDetectorService {
   late PoseDetector _poseDetector;
   RepCounter? _repCounter;
@@ -78,13 +77,10 @@ class PoseDetectorService {
     } else if (_currentExercise == 'bench' || _currentExercise == 'bench press') {
       formCheck = _formChecker.checkAllBenchForm(pose, _repCounter!.currentState);
     } else if (_currentExercise == 'row' || _currentExercise == 'barbell row') {
-      // Rows use symmetry check only
       formCheck = _formChecker.checkBenchSymmetry(pose, _repCounter!.currentState);
     } else if (_currentExercise == 'overhead' || _currentExercise == 'overhead press') {
-      // Overhead press uses symmetry check ONLY (no elbow flare)
       formCheck = _formChecker.checkBenchSymmetry(pose, _repCounter!.currentState);
     } else if (_currentExercise == 'deadlift') {
-      // Deadlift uses back rounding and symmetry checks
       formCheck = _formChecker.checkAllDeadliftForm(pose, _repCounter!.currentState);
     } else {
       formCheck = FormCheckResult(hasError: false);

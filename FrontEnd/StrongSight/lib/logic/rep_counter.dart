@@ -5,7 +5,6 @@ class RepCounter {
   ExerciseState currentState = ExerciseState.standing;
   int count = 0;
   
-  // Tracking Metrics
   double _smoothedAngle = 180.0;
   final double _emaAlpha = 0.3;
   double _previousAngle = 180.0;
@@ -13,7 +12,6 @@ class RepCounter {
   final int _frameThreshold = 2;
   bool _isInitialized = false;
 
-  // Form Feedback
   String feedbackMessage = "Ready? Begin your descent.";
   bool isError = false;
 
@@ -31,9 +29,9 @@ class RepCounter {
     double velocity = (_smoothedAngle - _previousAngle).abs();
     _previousAngle = _smoothedAngle;
 
-    // Debug logging for rows to diagnose issue
+    // Debug for rows
     if (_isRow() && currentState != ExerciseState.standing) {
-      print('Row Debug - State: $currentState, Angle: ${_smoothedAngle.toStringAsFixed(1)}°, '
+      print('Row - State: $currentState, Angle: ${_smoothedAngle.toStringAsFixed(1)}°, '
             'Velocity: ${velocity.toStringAsFixed(1)}°, Frames: $_consecutiveFrames');
     }
 
@@ -91,7 +89,6 @@ class RepCounter {
     _consecutiveFrames = 0;
   }
 
-  // Exercise-specific feedback messages
   String _getDescentMessage() {
     if (_isBenchPress()) return "Lowering... control the bar.";
     if (_isSquat()) return "Lowering... keep it controlled.";

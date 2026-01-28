@@ -2,9 +2,8 @@ import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import '../models/exercise_config.dart';
 import 'angle_calculator.dart';
 
-/// Handles form validation and error detection for exercises
 class FormChecker {
-  // SQUAT form checks
+  // Squat checks
   int _kneeCaveFrameCount = 0;
   static const int _kneeCaveThresholdFrames = 3;
   static const double _kneeCaveRatio = 0.75;
@@ -17,7 +16,7 @@ class FormChecker {
   static const int _forwardLeanThresholdFrames = 3;
   static const double _forwardLeanRatio = 0.75;
   
-  // BENCH PRESS form checks
+  // Bench press checks
   int _elbowFlareFrameCount = 0;
   static const int _elbowFlareThresholdFrames = 3;
   static const double _elbowFlareMaxAngle = 80.0;
@@ -26,16 +25,16 @@ class FormChecker {
   static const int _benchAsymmetryThresholdFrames = 3;
   static const double _benchAsymmetryAngleDiff = 15.0;
   
-  // DEADLIFT form checks
+  // Deadlift checks
   int _backRoundingFrameCount = 0;
   static const int _backRoundingThresholdFrames = 4;
-  static const double _backRoundingAngleMin = 160.0; // Spine should stay relatively straight
+  static const double _backRoundingAngleMin = 160.0;
   
   int _deadliftAsymmetryFrameCount = 0;
   static const int _deadliftAsymmetryThresholdFrames = 4;
   static const double _deadliftAsymmetryAngleDiff = 15.0;
   
-  // ERROR PERSISTENCE
+  // Error persistence
   String? _lastErrorMessage;
   FormErrorType? _lastErrorType;
   int _errorDisplayFrames = 0;
@@ -43,7 +42,6 @@ class FormChecker {
   
   static const double _minConfidence = 0.6;
 
-  /// Reset form checker state (call when starting new exercise)
   void reset() {
     _kneeCaveFrameCount = 0;
     _asymmetryFrameCount = 0;
@@ -57,7 +55,7 @@ class FormChecker {
     _errorDisplayFrames = 0;
   }
 
-  // ========== SQUAT FORM CHECKS ==========
+  // SQUAT CHECKS
 
   FormCheckResult checkKneeCave(Pose pose, ExerciseState currentState) {
     final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
@@ -196,7 +194,7 @@ class FormChecker {
     return FormCheckResult(hasError: false);
   }
 
-  // ========== BENCH PRESS FORM CHECKS ==========
+  // BENCH PRESS CHECKS
 
   FormCheckResult checkElbowFlare(Pose pose, ExerciseState currentState) {
     final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
@@ -292,12 +290,8 @@ class FormChecker {
     return (180 / 3.14159) * (1.5708 - (cosAngle).abs().clamp(0, 1));
   }
 
-  // ========== DEADLIFT FORM CHECKS ==========
+  // DEADLIFT CHECKS
 
-  /// Check for back rounding during deadlift
-  /// 
-  /// From the side, detect if the spine is rounding (back angle too small)
-  /// Spine should maintain relatively straight position
   FormCheckResult checkBackRounding(Pose pose, ExerciseState currentState) {
     final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
     final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
@@ -309,17 +303,14 @@ class FormChecker {
       return FormCheckResult(hasError: false);
     }
 
-    // Check during descent and bottom (most dangerous for rounding)
     bool isRelevantPhase = currentState == ExerciseState.descent || currentState == ExerciseState.bottom;
     if (!isRelevantPhase) {
       _backRoundingFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
 
-    // Calculate shoulder-hip-knee angle (spine angle)
     double spineAngle = AngleCalculator.calculateAngle(leftShoulder, leftHip, leftKnee);
 
-    // If spine angle is too small, back is rounding
     if (spineAngle < _backRoundingAngleMin) {
       _backRoundingFrameCount++;
       if (_backRoundingFrameCount >= _backRoundingThresholdFrames) {
@@ -336,9 +327,6 @@ class FormChecker {
     return FormCheckResult(hasError: false);
   }
 
-  /// Check hip symmetry for deadlift (left vs right side)
-  /// 
-  /// From the front, check if hips are level (not tilted)
   FormCheckResult checkDeadliftSymmetry(Pose pose, ExerciseState currentState) {
     final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
     final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
@@ -362,7 +350,6 @@ class FormChecker {
       return FormCheckResult(hasError: false);
     }
 
-    // Compare left and right hip angles
     double leftHipAngle = AngleCalculator.calculateAngle(leftHip, leftKnee, leftAnkle);
     double rightHipAngle = AngleCalculator.calculateAngle(rightHip, rightKnee, rightAnkle);
     double angleDifference = (leftHipAngle - rightHipAngle).abs();
@@ -383,7 +370,7 @@ class FormChecker {
     return FormCheckResult(hasError: false);
   }
 
-  // ========== COMBINED FORM CHECKS ==========
+  // COMBINED CHECKS
 
   FormCheckResult checkTrackingConfidence(
     PoseLandmark? vertex,
@@ -426,12 +413,10 @@ class FormChecker {
     return _persistError(_prioritizeError([elbowFlareResult, symmetryResult]));
   }
 
-  /// Run all DEADLIFT form checks
   FormCheckResult checkAllDeadliftForm(Pose pose, ExerciseState currentState) {
     final backRoundingResult = checkBackRounding(pose, currentState);
     final symmetryResult = checkDeadliftSymmetry(pose, currentState);
 
-    // Prioritize: back rounding is most dangerous, then symmetry
     return _persistError(_prioritizeError([backRoundingResult, symmetryResult]));
   }
 

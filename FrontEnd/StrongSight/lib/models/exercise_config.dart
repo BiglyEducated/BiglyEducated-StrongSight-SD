@@ -1,22 +1,15 @@
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 
-// The four-state system used to track repetitions (Section 6.3.7)
 enum ExerciseState { standing, descent, bottom, ascending }
 
 class ExerciseConfig {
   final String name;
-  
-  // Generic biomechanical naming for any exercise (Section 6.3.2)
-  final PoseLandmarkType vertexJoint; // The central connecting joint (e.g., Knee)
-  final PoseLandmarkType pointA;      // First outer joint (e.g., Hip)
-  final PoseLandmarkType pointB;      // Second outer joint (e.g., Ankle)
-
-  // Machine-readable metrics and thresholds (Section 6.1.1)
-  final double standingThreshold;     // Angle defining the "Standing" state
-  final double bottomThreshold;       // Angle required to reach "Bottom" state
-  final double velocityLimit;         // Degrees per frame for stabilization (Section 6.3.7)
-  
-  // Setup recommendations for users (Section 6.3.8)
+  final PoseLandmarkType vertexJoint;
+  final PoseLandmarkType pointA;
+  final PoseLandmarkType pointB;
+  final double standingThreshold;
+  final double bottomThreshold;
+  final double velocityLimit;
   final String optimalAngle;
   final String cameraHeight;
 
@@ -27,14 +20,13 @@ class ExerciseConfig {
     required this.pointB,
     this.standingThreshold = 160.0,
     this.bottomThreshold = 95.0,
-    this.velocityLimit = 5.0, // Threshold to prevent premature transitions
+    this.velocityLimit = 5.0,
     required this.optimalAngle,
     required this.cameraHeight,
   });
 }
 
 class ExerciseLibrary {
-  // Master configuration library based on Section 6.1 and 6.3.8
   static final Map<String, ExerciseConfig> configs = {
     'squat': ExerciseConfig(
       name: "Squat",
@@ -71,8 +63,8 @@ class ExerciseLibrary {
       vertexJoint: PoseLandmarkType.leftHip,
       pointA: PoseLandmarkType.leftShoulder,
       pointB: PoseLandmarkType.leftKnee,
-      standingThreshold: 165.0, // Reduced from 175 - easier lockout
-      bottomThreshold: 120.0,   // Increased from 115 - easier starting position
+      standingThreshold: 165.0,
+      bottomThreshold: 120.0,
       optimalAngle: "Side (90°)",
       cameraHeight: "Hip Height",
     ),
