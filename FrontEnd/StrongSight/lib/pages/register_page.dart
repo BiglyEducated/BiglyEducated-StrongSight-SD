@@ -12,21 +12,30 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
 
+  // ---- Controllers ----
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _weightController = TextEditingController();
   final TextEditingController _heightFtController = TextEditingController();
   final TextEditingController _heightInController = TextEditingController();
+
+  // ---- Toggle visibility ----
+  bool _passwordVisible = false;
+  bool _confirmVisible = false;
 
   String? _selectedGender;
   bool _isLoading = false;
 
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() => _isLoading = true);
     await Future.delayed(const Duration(seconds: 1));
     if (!mounted) return;
+
     setState(() => _isLoading = false);
     Navigator.of(context).pushReplacementNamed('/home');
   }
@@ -64,6 +73,8 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
         centerTitle: true,
       ),
+
+      // --------------- BODY ---------------
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
@@ -83,6 +94,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     color: textColor,
                   ),
                 ),
+
                 const SizedBox(height: 24),
 
                 // ---------- Name ----------
@@ -106,6 +118,62 @@ class _RegisterPageState extends State<RegisterPage> {
                       return 'Enter your email';
                     } else if (!value.contains('@')) {
                       return 'Enter a valid email';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 14),
+
+                // ---------- Password ----------
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: !_passwordVisible,
+                  style: TextStyle(color: textColor),
+                  decoration: _inputDecoration("Password", cardColor, subTextColor, accentColor)
+                      .copyWith(
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _passwordVisible ? Icons.visibility : Icons.visibility_off,
+                        color: subTextColor,
+                      ),
+                      onPressed: () {
+                        setState(() => _passwordVisible = !_passwordVisible);
+                      },
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Enter a password';
+                    } else if (value.length < 6) {
+                      return 'Password must be at least 6 characters';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 14),
+
+                // ---------- Confirm Password ----------
+                TextFormField(
+                  controller: _confirmController,
+                  obscureText: !_confirmVisible,
+                  style: TextStyle(color: textColor),
+                  decoration: _inputDecoration("Confirm Password", cardColor, subTextColor, accentColor)
+                      .copyWith(
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _confirmVisible ? Icons.visibility : Icons.visibility_off,
+                        color: subTextColor,
+                      ),
+                      onPressed: () {
+                        setState(() => _confirmVisible = !_confirmVisible);
+                      },
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Re-enter your password';
+                    } else if (value != _passwordController.text) {
+                      return 'Passwords do not match';
                     }
                     return null;
                   },
@@ -179,6 +247,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 30),
 
                 // ---------- Continue Button ----------

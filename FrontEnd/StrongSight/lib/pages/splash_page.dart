@@ -1,39 +1,39 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
+import 'package:lottie/lottie.dart';
+import 'login_page.dart';
 
-class SplashPage extends StatefulWidget {
-  const SplashPage({super.key});
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
 
   @override
-  State<SplashPage> createState() => _SplashPageState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashPageState extends State<SplashPage>
+class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _animation;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
 
+    // Controller drives both fade and scale
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 1200),
     );
 
-    // The curl animation: 0° → -45° → 0° (like lifting and lowering a weight)
-    _animation = TweenSequence([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: -math.pi / 4), weight: 50),
-      TweenSequenceItem(tween: Tween(begin: -math.pi / 4, end: 0.0), weight: 50),
-    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _fadeAnimation =
+        CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+
+    // Start slightly zoomed out so it fits screen better
+    _scaleAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
 
     _controller.forward();
-
-    // Navigate to home after animation
-    Future.delayed(const Duration(seconds: 3), () {
-      Navigator.pushReplacementNamed(context, '/home');
-    });
   }
 
   @override
@@ -44,21 +44,49 @@ class _SplashPageState extends State<SplashPage>
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF094941),
-      body: Center(
-        child: AnimatedBuilder(
-          animation: _animation,
-          builder: (context, child) {
-            return Transform.rotate(
-              angle: _animation.value,
-              origin: const Offset(0, 40), // pivot point for curl
-              child: child,
-            );
-          },
-          child: Image.asset(
-            'assets/images/strongsight_logo.png',
-            width: 160,
+      backgroundColor: const Color(0xFF12110F),
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: ScaleTransition(
+          scale: _scaleAnimation,
+          child: Center(
+            child: Transform.scale(
+              scale: 1.00, //
+              child: Lottie.asset(
+                'assets/videos/SplashScreen.json',
+                fit: BoxFit.contain,
+                width: size.width,
+                height: size.height,
+                repeat: false,
+                onLoaded: (composition) {
+                  Future.delayed(
+                    composition.duration - const Duration(milliseconds: 300),
+                    () {
+                      if (mounted) {
+                        Navigator.of(context).pushReplacement(
+                          PageRouteBuilder(
+                            pageBuilder: (_, __, ___) => const LoginPage(),
+                            transitionDuration:
+                                const Duration(milliseconds: 600),
+                            transitionsBuilder: (_, animation, __, child) =>
+                                FadeTransition(
+                              opacity: CurvedAnimation(
+                                parent: animation,
+                                curve: Curves.easeInOut,
+                              ),
+                              child: child,
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  );
+                },
+              ),
+            ),
           ),
         ),
       ),

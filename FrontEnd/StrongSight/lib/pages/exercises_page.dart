@@ -64,6 +64,179 @@ class _ExercisesPageState extends State<ExercisesPage> {
         "Avoid swinging your body during the motion."
       ]
     },
+    {
+    "name": "Lat Pulldowns",
+    "image": "assets/images/LatPulldown.png",
+    "muscles": "Lats, Biceps, Rear Delts",
+    "equipment": "Cable Machine",
+    "form": [
+      "Sit down at a lat pulldown station and grab the bar with a wide overhand grip.",
+      "Keep your chest tall and engage your core.",
+      "Pull the bar down to your upper chest, squeezing your shoulder blades together.",
+      "Pause briefly, then slowly return to the starting position with control."
+    ]
+  },
+  {
+    "name": "Pull-ups",
+    "image": "assets/images/PullUp.png",
+    "muscles": "Lats, Biceps, Forearms, Core",
+    "equipment": "Pull-up Bar",
+    "form": [
+      "Grab the pull-up bar with an overhand grip slightly wider than shoulder width.",
+      "Hang fully extended, then pull yourself upward until your chin clears the bar.",
+      "Pause briefly at the top, then lower yourself down with control.",
+      "Avoid swinging or using momentum to complete the movement."
+    ]
+  },
+  {
+    "name": "Push-ups",
+    "image": "assets/images/PushUp.png",
+    "muscles": "Chest, Shoulders, Triceps, Core",
+    "equipment": "Bodyweight",
+    "form": [
+      "Place your hands slightly wider than shoulder-width on the floor.",
+      "Keep your body straight from head to heels and your core engaged.",
+      "Lower your chest toward the floor until your elbows reach 90 degrees.",
+      "Push back up through your palms to return to the starting position."
+    ]
+  },
+  {
+    "name": "Sit-ups",
+    "image": "assets/images/SitUp.png",
+    "muscles": "Abdominals, Hip Flexors",
+    "equipment": "Bodyweight or Mat",
+    "form": [
+      "Lie flat on your back with knees bent and feet anchored.",
+      "Place your hands behind your head or cross them over your chest.",
+      "Engage your core to lift your upper body toward your knees.",
+      "Lower yourself back down slowly with control."
+    ]
+  },
+  {
+    "name": "Dumbbell Shoulder Press",
+    "image": "assets/images/ShoulderPress.png",
+    "muscles": "Deltoids, Triceps, Upper Chest",
+    "equipment": "Dumbbells or Barbell",
+    "form": [
+      "Sit or stand with a dumbbell in each hand at shoulder height, palms facing forward.",
+      "Engage your core and press the weights overhead until your arms are fully extended.",
+      "Lower the weights slowly back to shoulder height and repeat."
+    ]
+  },
+  {
+    "name": "Plank",
+    "image": "assets/images/Plank.png",
+    "muscles": "Core, Shoulders, Back, Glutes",
+    "equipment": "Bodyweight or Mat",
+    "form": [
+      "Start in a push-up position but rest on your forearms instead of your hands.",
+      "Keep your body in a straight line from head to heels.",
+      "Engage your abs and glutes, holding the position without letting your hips sag.",
+      "Breathe steadily and maintain good form for the duration."
+    ]
+  },
+  {
+    "name": "Lunges",
+    "image": "assets/images/Lunges.png",
+    "muscles": "Glutes, Quads, Hamstrings",
+    "equipment": "Bodyweight or Dumbbells",
+    "form": [
+      "Stand tall with feet hip-width apart and core engaged.",
+      "Step forward with one leg and lower until both knees form 90° angles.",
+      "Push through your front heel to return to standing position.",
+      "Alternate legs and repeat for reps."
+    ]
+  },
+  {
+    "name": "Tricep Dips",
+    "image": "assets/images/TricepDip.png",
+    "muscles": "Triceps, Chest, Shoulders",
+    "equipment": "Parallel Bars or Bench",
+    "form": [
+      "Position your hands shoulder-width apart on parallel bars or a bench behind you.",
+      "Lower your body by bending your elbows until they reach 90°.",
+      "Press back up to the starting position, keeping your chest lifted."
+    ]
+  },
+  {
+    "name": "Seated Cable Row",
+    "image": "assets/images/SeatedRow.png",
+    "muscles": "Lats, Rhomboids, Biceps",
+    "equipment": "Cable Machine",
+    "form": [
+      "Sit at a cable row station with feet braced and a neutral grip handle.",
+      "Keep your back straight and pull the handle toward your torso.",
+      "Squeeze your shoulder blades together, then slowly extend your arms forward."
+    ]
+  },
+  {
+    "name": "Leg Press",
+    "image": "assets/images/LegPress.png",
+    "muscles": "Quads, Glutes, Hamstrings",
+    "equipment": "Leg Press Machine",
+    "form": [
+      "Sit in the leg press machine with your feet shoulder-width apart on the platform.",
+      "Lower the platform toward you until your knees reach a 90° angle.",
+      "Push through your heels to extend your legs without locking your knees."
+    ]
+  },
+  {
+    "name": "Calf Raises",
+    "image": "assets/images/CalfRaise.png",
+    "muscles": "Calves",
+    "equipment": "Bodyweight, Dumbbells, or Machine",
+    "form": [
+      "Stand on the edge of a step with heels hanging off.",
+      "Raise your heels as high as possible while contracting your calves.",
+      "Pause briefly, then lower your heels below the step for a full stretch."
+    ]
+  },
+  {
+    "name": "Russian Twists",
+    "image": "assets/images/RussianTwist.png",
+    "muscles": "Obliques, Core",
+    "equipment": "Bodyweight or Medicine Ball",
+    "form": [
+      "Sit on the floor with knees bent and feet slightly elevated.",
+      "Hold a weight or clasp your hands together.",
+      "Twist your torso to each side, engaging your obliques as you move."
+    ]
+  },
+  {
+    "name": "Burpees",
+    "image": "assets/images/Burpees.png",
+    "muscles": "Full Body (Chest, Legs, Core, Shoulders)",
+    "equipment": "Bodyweight",
+    "form": [
+      "Start standing, then squat down and place your hands on the floor.",
+      "Jump your feet back into a plank position.",
+      "Perform a push-up, then jump your feet forward.",
+      "Explosively jump upward and repeat."
+    ]
+  },
+  {
+    "name": "Kettlebell Swings",
+    "image": "assets/images/KettlebellSwing.png",
+    "muscles": "Glutes, Hamstrings, Core, Shoulders",
+    "equipment": "Kettlebell",
+    "form": [
+      "Stand with feet shoulder-width apart holding a kettlebell with both hands.",
+      "Hinge at your hips and swing the kettlebell back between your legs.",
+      "Drive your hips forward to swing it up to shoulder height.",
+      "Control the swing and let it return between your legs for the next rep."
+    ]
+  },
+  {
+    "name": "Mountain Climbers",
+    "image": "assets/images/MountainClimber.png",
+    "muscles": "Core, Shoulders, Hip Flexors",
+    "equipment": "Bodyweight or Mat",
+    "form": [
+      "Start in a high plank position with hands under shoulders.",
+      "Drive one knee toward your chest, then quickly switch legs.",
+      "Continue alternating at a quick pace, keeping your back straight."
+    ]
+  }
   ];
 
   List<String> get _muscleGroups {
