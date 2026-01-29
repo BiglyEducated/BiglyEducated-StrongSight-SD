@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/cupertino.dart';
 import '../providers/theme_provider.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -12,6 +13,10 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   bool _notificationsEnabled = true;
   bool _soundEnabled = true;
+  
+  //hard coded height 
+  int _heightFt = 5;
+  int _heightIn = 10;
 
   @override
   Widget build(BuildContext context) {
@@ -118,7 +123,7 @@ class _ProfilePageState extends State<ProfilePage> {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _InfoTile(label: "Phone", value: "(407) 555-1234", labelColor: textColor, valueColor: subTextColor),
-              _InfoTile(label: "Height", value: "5'10\"", labelColor: textColor, valueColor: subTextColor),
+              _InfoTile(label: "Height", value: "${_heightFt}'${_heightIn}\"", labelColor: textColor, valueColor: subTextColor),
               _InfoTile(label: "Weight", value: "160 lbs", labelColor: textColor, valueColor: subTextColor),
             ],
           ),
@@ -127,7 +132,6 @@ class _ProfilePageState extends State<ProfilePage> {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _InfoTile(label: "Age", value: "23", labelColor: textColor, valueColor: subTextColor),
-              _InfoTile(label: "Goal", value: "Muscle Gain", labelColor: textColor, valueColor: subTextColor),
               _InfoTile(label: "Joined", value: "Feb 2025", labelColor: textColor, valueColor: subTextColor),
             ],
           ),
@@ -257,7 +261,7 @@ class _ProfilePageState extends State<ProfilePage> {
   );
 }
 
-
+  // ---------- EDIT PROFILE BOTTOM SHEET ----------
   void _showEditProfileSheet(BuildContext context, Color cardColor, Color textColor,
       Color accentColor, Color subTextColor) {
     showModalBottomSheet(
@@ -307,12 +311,19 @@ class _ProfilePageState extends State<ProfilePage> {
                 _buildTextField("Email", "yoendry@example.com", textColor, subTextColor, accentColor),
                 Row(
                   children: [
-                    Expanded(child: _buildTextField("Height", "5'10\"", textColor, subTextColor, accentColor)),
+                    Expanded(
+                      child: _buildHeightPickerField(
+                        context,
+                        textColor,
+                        subTextColor,
+                        accentColor,
+                      ),
+                  ),
+
                     const SizedBox(width: 12),
                     Expanded(child: _buildTextField("Weight", "160 lbs", textColor, subTextColor, accentColor)),
                   ],
                 ),
-                _buildTextField("Goal", "Muscle Gain", textColor, subTextColor, accentColor),
 
                 const SizedBox(height: 25),
                 SizedBox(
@@ -345,6 +356,100 @@ class _ProfilePageState extends State<ProfilePage> {
       },
     );
   }
+
+
+
+  // ---------- HEIGHT PICKER FIELD ----------
+  Widget _buildHeightPickerField(BuildContext context, Color textColor,
+      Color subTextColor, Color accentColor) {
+    return GestureDetector(
+      onTap: () => _showHeightPicker(context, accentColor),
+      child: AbsorbPointer(
+        child: TextField(
+          decoration: InputDecoration(
+            labelText: "Height",
+            hintText: "${_heightFt}' ${_heightIn}\"",
+            suffixIcon: Icon(Icons.height, color: subTextColor),
+          ),
+          style: TextStyle(color: textColor),
+        ),
+      ),
+    );
+  }
+
+  // ---------- HEIGHT SCROLL PICKER ----------
+  void _showHeightPicker(BuildContext context, Color accentColor) {
+    int tempFt = _heightFt;
+    int tempIn = _heightIn;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.black87,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) {
+        return SizedBox(
+          height: 300,
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              const Text("Select Height",
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold)),
+              Expanded(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: CupertinoPicker(
+                        itemExtent: 40,
+                        scrollController:
+                            FixedExtentScrollController(initialItem: tempFt - 3),
+                        onSelectedItemChanged: (i) => tempFt = i + 3,
+                        children: List.generate(
+                            8,
+                            (i) => Center(
+                                child: Text("${i + 3} ft",
+                                    style: const TextStyle(color: Colors.white)))),
+                      ),
+                    ),
+                    Expanded(
+                      child: CupertinoPicker(
+                        itemExtent: 40,
+                        scrollController:
+                            FixedExtentScrollController(initialItem: tempIn),
+                        onSelectedItemChanged: (i) => tempIn = i,
+                        children: List.generate(
+                            12,
+                            (i) => Center(
+                                child: Text("$i in",
+                                    style: const TextStyle(color: Colors.white)))),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton(
+                style:
+                    ElevatedButton.styleFrom(backgroundColor: accentColor),
+                onPressed: () {
+                  setState(() {
+                    _heightFt = tempFt;
+                    _heightIn = tempIn;
+                  });
+                  Navigator.pop(context);
+                },
+                child: const Text("Done"),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
 
   Widget _buildTextField(String label, String value, Color textColor,
       Color subTextColor, Color accentColor) {
@@ -445,7 +550,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 }
-
 // ---------- INFO TILE ----------
 class _InfoTile extends StatelessWidget {
   final String label;

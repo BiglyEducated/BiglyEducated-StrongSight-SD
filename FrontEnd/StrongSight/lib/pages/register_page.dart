@@ -21,6 +21,8 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _weightController = TextEditingController();
   final TextEditingController _heightFtController = TextEditingController();
   final TextEditingController _heightInController = TextEditingController();
+  final TextEditingController _ageController = TextEditingController();
+
 
   // ---- Toggle visibility ----
   bool _passwordVisible = false;
@@ -190,6 +192,28 @@ class _RegisterPageState extends State<RegisterPage> {
                       value == null || value.isEmpty ? 'Enter your phone number' : null,
                 ),
                 const SizedBox(height: 14),
+
+
+                // ---------- Age ----------
+                TextFormField(
+                  controller: _ageController,
+                  keyboardType: TextInputType.number,
+                  style: TextStyle(color: textColor),
+                  decoration:
+                      _inputDecoration("Age", cardColor, subTextColor, accentColor),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Enter your age';
+                    }
+                    final age = int.tryParse(value);
+                    if (age == null || age < 10 || age > 100) {
+                      return 'Enter a valid age';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 14),
+
 
                 // ---------- Gender ----------
                 DropdownButtonFormField<String>(

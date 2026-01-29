@@ -3,16 +3,40 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 
-/// ------------------ WORKOUT MODEL ------------------
+/// ======================================================
+/// ===================== DATA MODELS =====================
+/// ======================================================
+
+class WorkoutSet {
+  int reps;
+  double weight;
+
+  WorkoutSet({required this.reps, required this.weight});
+}
+
+class WorkoutExercise {
+  String name;
+  List<WorkoutSet> sets;
+
+  WorkoutExercise({
+    required this.name,
+    required this.sets,
+  });
+}
+
 class Workout {
   String title;
-  String notes;
+  List<WorkoutExercise> exercises;
 
   Workout({
     required this.title,
-    required this.notes,
+    required this.exercises,
   });
 }
+
+/// ======================================================
+/// ===================== CALENDAR PAGE ===================
+/// ======================================================
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
@@ -28,7 +52,20 @@ class _CalendarPageState extends State<CalendarPage> {
   /// In-memory storage (replace with API/Firebase later)
   final Map<DateTime, Workout> _workoutsByDay = {};
 
-  /// Normalize date (important for map keys)
+  /// Fake exercise library (later sync with Exercises page)
+  final List<String> _exerciseLibraryNames = [
+    "Squat",
+    "Bench Press",
+    "Deadlift",
+    "Bicep Curls",
+    "Pull-ups",
+    "Push-ups",
+    "Shoulder Press",
+    "Lunges",
+    "Tricep Dips",
+  ];
+
+  /// Normalize date for Map keys
   DateTime _normalize(DateTime d) => DateTime.utc(d.year, d.month, d.day);
 
   Workout? _getWorkout(DateTime day) {
@@ -40,11 +77,43 @@ class _CalendarPageState extends State<CalendarPage> {
     return workout == null ? [] : [workout.title];
   }
 
+
+  Widget _buildCalendarCell(DateTime day, Color textColor) {
+      final hasWorkout = _getWorkout(day) != null;
+
+      return SizedBox.expand(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              "${day.day}",
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Image.asset(
+              hasWorkout
+                  ? "assets/images/OpenEyeLogo.png"
+                  : "assets/images/ClosedEyeLogo.png",
+              width: 22,
+              height: 22,
+            ),
+          ],
+        ),
+      );
+    }
+
+  /// ======================================================
+  /// ===================== MAIN BUILD =====================
+  /// ======================================================
+
   @override
   Widget build(BuildContext context) {
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
 
-    // -------- COLORS --------
     const ivory = Color(0xFFF3EBD3);
     const espresso = Color(0xFF12110F);
     const lightGreen = Color(0xFF094941);
@@ -69,25 +138,21 @@ class _CalendarPageState extends State<CalendarPage> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        iconTheme: const IconThemeData(color: lightGreen),
       ),
+
+
+    /// ======================================================
+    /// ===================== CALENDAR CELL ==================
+    /// ======================================================
 
       body: Column(
         children: [
-          /// ------------------ CALENDAR ------------------
+          /// ===================== CALENDAR =====================
           Container(
             margin: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: cardColor,
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                if (!isDark)
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-              ],
             ),
             child: TableCalendar(
               firstDay: DateTime.utc(2020, 1, 1),
@@ -96,6 +161,7 @@ class _CalendarPageState extends State<CalendarPage> {
               selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
               eventLoader: _getEventsForDay,
 
+              /// 👁️ CUSTOM DAY CELLS (OPEN/CLOSED EYE)
               calendarBuilders: CalendarBuilders(
                 defaultBuilder: (context, day, _) =>
                     _buildCalendarCell(day, textColor),
@@ -123,15 +189,13 @@ class _CalendarPageState extends State<CalendarPage> {
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                 ),
-                leftChevronIcon:
-                    Icon(Icons.chevron_left, color: textColor),
-                rightChevronIcon:
-                    Icon(Icons.chevron_right, color: textColor),
+                leftChevronIcon: Icon(Icons.chevron_left, color: textColor),
+                rightChevronIcon: Icon(Icons.chevron_right, color: textColor),
               ),
 
               calendarStyle: const CalendarStyle(
                 outsideDaysVisible: false,
-                markersMaxCount: 0, // removes black dots
+                markersMaxCount: 0,
               ),
 
               daysOfWeekStyle: DaysOfWeekStyle(
@@ -146,9 +210,10 @@ class _CalendarPageState extends State<CalendarPage> {
                 });
               },
             ),
+
           ),
 
-          /// ------------------ WORKOUT PANEL ------------------
+          /// ===================== WORKOUT PANEL =====================
           Expanded(
             child: Container(
               padding: const EdgeInsets.all(16),
@@ -171,37 +236,10 @@ class _CalendarPageState extends State<CalendarPage> {
     );
   }
 
-  /// ------------------ CALENDAR CELL ------------------
-  Widget _buildCalendarCell(DateTime day, Color textColor) {
-  final hasWorkout = _getWorkout(day) != null;
+  /// ======================================================
+  /// ===================== WORKOUT PANEL ==================
+  /// ======================================================
 
-  return SizedBox.expand( 
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          "${day.day}",
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: textColor,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Image.asset(
-          hasWorkout
-              ? "assets/images/OpenEyeLogo.png"
-              : "assets/images/ClosedEyeLogo.png",
-          width: 22,
-          height: 22,
-        ),
-      ],
-    ),
-  );
-}
-
-
-  /// ------------------ WORKOUT PANEL ------------------
   Widget _buildWorkoutPanel(
     DateTime day,
     Color accentColor,
@@ -224,20 +262,38 @@ class _CalendarPageState extends State<CalendarPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          /// Workout Title
           Text(
             workout.title,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
               color: accentColor,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            workout.notes,
-            style: TextStyle(color: subTextColor, fontSize: 16),
-          ),
+          const SizedBox(height: 16),
+
+          /// Exercises + Sets
+          ...workout.exercises.map((ex) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(ex.name,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                ...ex.sets.map((s) => Text(
+                      "${s.reps} reps @ ${s.weight} lbs",
+                      style: TextStyle(color: subTextColor),
+                    )),
+                const SizedBox(height: 12),
+              ],
+            );
+          }),
+
           const SizedBox(height: 20),
+
+          /// Actions
           Row(
             children: [
               ElevatedButton.icon(
@@ -262,58 +318,169 @@ class _CalendarPageState extends State<CalendarPage> {
     );
   }
 
-  /// ------------------ CREATE / EDIT FORM ------------------
+  /// ======================================================
+  /// ===================== WORKOUT FORM ===================
+  /// ======================================================
+
   void _openWorkoutForm(DateTime day, {Workout? workout}) {
     final titleController =
         TextEditingController(text: workout?.title ?? '');
-    final notesController =
-        TextEditingController(text: workout?.notes ?? '');
+
+    List<WorkoutExercise> tempExercises =
+        workout?.exercises
+                .map((e) => WorkoutExercise(
+                      name: e.name,
+                      sets: e.sets
+                          .map((s) =>
+                              WorkoutSet(reps: s.reps, weight: s.weight))
+                          .toList(),
+                    ))
+                .toList() ??
+            [];
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) {
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            16,
-            16,
-            MediaQuery.of(context).viewInsets.bottom + 16,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration:
-                    const InputDecoration(labelText: 'Workout Title'),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                MediaQuery.of(ctx).viewInsets.bottom + 16,
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: notesController,
-                decoration:
-                    const InputDecoration(labelText: 'Notes / Focus'),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    /// Workout Name
+                    TextField(
+                      controller: titleController,
+                      decoration: const InputDecoration(
+                          labelText: 'Workout Title'),
+                    ),
+                    const SizedBox(height: 16),
+
+                    /// Exercises
+                    const Text("Exercises",
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+
+                    ...tempExercises.map((exercise) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(exercise.name,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold)),
+                          ...exercise.sets.map((set) {
+                            return Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    keyboardType: TextInputType.number,
+                                    decoration:
+                                        const InputDecoration(labelText: "Reps"),
+                                    onChanged: (v) =>
+                                        set.reps = int.tryParse(v) ?? 0,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: TextField(
+                                    keyboardType: TextInputType.number,
+                                    decoration: const InputDecoration(
+                                        labelText: "Weight(lbs)"),
+                                    onChanged: (v) =>
+                                        set.weight = double.tryParse(v) ?? 0,
+                                  ),
+                                ),
+                              ],
+                            );
+                          }),
+                          TextButton.icon(
+                            icon: const Icon(Icons.add),
+                            label: const Text("Add Set"),
+                            onPressed: () {
+                              setModalState(() {
+                                exercise.sets
+                                    .add(WorkoutSet(reps: 10, weight: 0));
+                              });
+                            },
+                          ),
+                          const Divider(),
+                        ],
+                      );
+                    }),
+
+                    /// Add Exercise Button
+                    TextButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: const Text("Add Exercise"),
+                      onPressed: () async {
+                        final selected = await _selectExerciseDialog();
+                        if (selected != null) {
+                          setModalState(() {
+                            tempExercises.add(
+                              WorkoutExercise(name: selected, sets: [
+                                WorkoutSet(reps: 10, weight: 0),
+                              ]),
+                            );
+                          });
+                        }
+                      },
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    /// Save Workout
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _workoutsByDay[_normalize(day)] = Workout(
+                            title: titleController.text,
+                            exercises: tempExercises,
+                          );
+                        });
+                        Navigator.pop(ctx);
+                      },
+                      child: Text(
+                          workout == null ? 'Create Workout' : 'Save Changes'),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _workoutsByDay[_normalize(day)] = Workout(
-                      title: titleController.text,
-                      notes: notesController.text,
-                    );
-                  });
-                  Navigator.pop(context);
-                },
-                child: Text(
-                    workout == null ? 'Create Workout' : 'Save Changes'),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
   }
+
+  /// ======================================================
+  /// ===================== EXERCISE PICKER =================
+  /// ======================================================
+
+  Future<String?> _selectExerciseDialog() {
+    return showDialog<String>(
+      context: context,
+      builder: (_) => SimpleDialog(
+        title: const Text("Select Exercise"),
+        children: _exerciseLibraryNames
+            .map((name) => SimpleDialogOption(
+                  child: Text(name),
+                  onPressed: () => Navigator.pop(context, name),
+                ))
+            .toList(),
+      ),
+    );
+  }
+
+  /// ======================================================
+  /// ===================== DELETE WORKOUT =================
+  /// ======================================================
 
   void _deleteWorkout(DateTime day) {
     setState(() {

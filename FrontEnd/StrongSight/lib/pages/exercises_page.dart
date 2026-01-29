@@ -5,29 +5,34 @@ import '../providers/theme_provider.dart';
 
 
 ///-----------MODELS -----------///
-class PlannedExercise {
-  final String name;
-  final int sets;
-  final int reps;
-  final double weight;
+class WorkoutSet {
+  int reps;
+  double weight;
 
-  PlannedExercise({
+  WorkoutSet({required this.reps, required this.weight});
+}
+
+class WorkoutExercise {
+  String name;
+  List<WorkoutSet> sets;
+
+  WorkoutExercise({
     required this.name,
     required this.sets,
-    required this.reps,
-    required this.weight,
   });
 }
 
-
-class Workout{
+class Workout {
   final String workoutName;
-  final List<PlannedExercise> exercises;
+  final List<WorkoutExercise> exercises;
+
   Workout({
     required this.workoutName,
     required this.exercises,
   });
 }
+
+///------------PAGE-----------------///
 
 class ExercisesPage extends StatefulWidget {
   const ExercisesPage({super.key});
@@ -195,17 +200,39 @@ List<Map<String, dynamic>> get _pinnedExerciseCards {
       .toList();
 }
 
+// Format sets for display
+String _formatSets(List<WorkoutSet> sets) {
+    return sets.map((s) => "${s.reps} @ ${s.weight} lbs").join(" | ");
+  }
 
 
   //Todays workout(REPLACE WITH API DATA)
   final Workout? todaysWorkout = Workout(
-    workoutName: "Leetcode Session",
-    exercises: [
-      PlannedExercise(name: "Squat", sets: 1, reps: 1, weight: 0),
-      PlannedExercise(name: "Bench Press", sets: 1, reps: 1, weight: 0),
-      PlannedExercise(name: "Bicep Curls", sets: 1, reps: 1, weight: 0),
-    ],
-  );
+  workoutName: "Leetcode Session",
+  exercises: [
+    WorkoutExercise(
+      name: "Squat",
+      sets: [
+        WorkoutSet(reps: 8, weight: 135),
+        WorkoutSet(reps: 8, weight: 135),
+      ],
+    ),
+    WorkoutExercise(
+      name: "Bench Press",
+      sets: [
+        WorkoutSet(reps: 10, weight: 95),
+      ],
+    ),
+    WorkoutExercise(
+      name: "Bicep Curls",
+      sets: [
+        WorkoutSet(reps: 12, weight: 25),
+        WorkoutSet(reps: 12, weight: 25),
+      ],
+    ),
+  ],
+);
+
 
   //Exercise Library
 
@@ -548,10 +575,9 @@ List<Map<String, dynamic>> get _pinnedExerciseCards {
               muscles: details["muscles"],
               equipment: details["equipment"],
               form: List<String>.from(details["form"]),
-              stats:
-                  "${planned.sets} × ${planned.reps} @ ${planned.weight} lbs",
-            ),
-          );
+              stats: _formatSets(planned.sets),
+              ),
+            );
         }).toList(),
       ),
     ),
