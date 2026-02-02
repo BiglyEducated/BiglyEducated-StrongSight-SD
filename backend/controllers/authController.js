@@ -4,8 +4,8 @@ import { auth, db } from "../config/firebase.js";
 
 export const signupUser = async (req, res) => {
   const {
+    uid,
     email,
-    password,
     displayName,
     phoneNumber,
     gender,
@@ -14,40 +14,28 @@ export const signupUser = async (req, res) => {
     heightIn,
   } = req.body;
 
-  getAuth()
-    .createUser({
-      email: email,
-      emailVerified: false,
-      password: password,
-      displayName: displayName,
-      phoneNumber: phoneNumber,
-      disabled: false,
-    })
-    .then(async (userRecord) => {
-      console.log("✅ Successfully created new user:", userRecord.uid);
-
-      // ✅ Create a Firestore user document with additional data
-      await db.collection("users").doc(userRecord.uid).set({
-        email,
-        displayName,
-        phoneNumber,
-        gender,
-        weight,
-        heightFt,
-        heightIn,
-        createdAt: new Date(),
-      });
-
-      res.status(201).json({
-        message: "User created successfully",
-        uid: userRecord.uid,
-        email: userRecord.email,
-      });
-    })
-    .catch((error) => {
-      console.log("❌ Error creating new user:", error);
-      res.status(500).json({ error: error.message });
+  try {
+    // Store user data in Firestore (Firebase user already created on frontend)
+    await db.collection("users").doc(uid).set({
+      email,
+      displayName,
+      phoneNumber,
+      gender,
+      weight,
+      heightFt,
+      heightIn,
+      createdAt: new Date(),
     });
+
+    res.status(201).json({
+      message: "User data stored successfully",
+      uid: uid,
+      email: email,
+    });
+  } catch (error) {
+    console.log("❌ Error storing user data:", error);
+    res.status(500).json({ error: error.message });
+  }
 };
 
 // 🧩 Log-out Controller (placeholder for now)
@@ -154,4 +142,145 @@ export const getUserInfo = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+export const getUserWorkouts = async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
 
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing or invalid token" });
+    }
+
+    const idToken = authHeader.split("Bearer ")[1];
+    const decodedToken = await getAuth().verifyIdToken(idToken);
+    const uid = decodedToken.uid;
+
+    const snapshot = await db
+      .collection("workouts_completed")
+      .where("uid", "==", uid)
+      .get();
+
+    if (snapshot.empty) {
+      return res.status(404).json({ error: "No workouts found for this user" });
+    }
+
+    // Map the workouts and sort by date in JavaScript
+    const workouts = snapshot.docs
+      .map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          title: data.title,
+          date: data.date, // This is a Firestore Timestamp
+          duration: data.duration,
+          exercises: data.exercises,
+          uid: data.uid,
+        };
+      })
+      .sort((a, b) => {
+        // Sort by date descending (most recent first)
+        const dateA = a.date?.toMillis?.() || 0;
+        const dateB = b.date?.toMillis?.() || 0;
+        return dateB - dateA;
+      });
+
+    return res.status(200).json({
+      message: "User workouts fetched successfully",
+      data: workouts,
+    });
+  } catch (error) {
+    console.error("Error fetching user workouts:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * GET USER WORKOUTS BY DATE RANGE
+ * Expects query params: start (ISO string), end (ISO string)
+ * Returns workouts for the user within the date range (inclusive)
+ */
+export const getUserWorkoutsByDate = async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing or invalid token" });
+    }
+
+    const idToken = authHeader.split("Bearer ")[1];
+    const decodedToken = await getAuth().verifyIdToken(idToken);
+    const uid = decodedToken.uid;
+
+    // Parse date range from query params
+    const { start, end } = req.query;
+    if (!start || !end) {
+      return res.status(400).json({ error: "Missing start or end date" });
+    }
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+
+    // Query workouts_completed for this user and date range
+    const workoutsSnapshot = await db
+      .collection("workouts_completed")
+      .where("uid", "==", uid)
+      .where("date", ">=", startDate)
+      .where("date", "<=", endDate)
+      .get();
+
+    const filteredWorkouts = workoutsSnapshot.docs.map(doc => doc.data());
+
+    return res.status(200).json({
+      message: "User workouts fetched successfully for date range",
+      data: filteredWorkouts,
+    });
+  } catch (error) {
+    console.error("Error fetching user workouts by date:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * ADD WORKOUT
+ * Expects body: { title, date, duration, exercises }
+ * Requires Authorization: Bearer <token>
+ */
+export const addWorkout = async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing or invalid token" });
+    }
+
+    const idToken = authHeader.split("Bearer ")[1];
+    const decodedToken = await getAuth().verifyIdToken(idToken);
+    const uid = decodedToken.uid;
+
+    const { title, date, duration, exercises } = req.body;
+
+    if (!title || !date || !duration || !exercises) {
+      return res.status(400).json({ error: "Missing required workout fields" });
+    }
+
+    // Convert date to Firestore Timestamp if it's a string
+    const workoutDate = typeof date === "string" ? new Date(date) : date;
+
+    const workoutData = {
+      title,
+      date: workoutDate, // Firestore will store as Timestamp
+      duration,
+      exercises,
+      uid,
+    };
+
+    const docRef = await db.collection("workouts_completed").add(workoutData);
+
+    return res.status(201).json({
+      message: "Workout added successfully",
+      id: docRef.id,
+      data: workoutData,
+    });
+  } catch (error) {
+    console.error("Error adding workout:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+//this is a test
