@@ -13,10 +13,20 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   bool _notificationsEnabled = true;
   bool _soundEnabled = true;
-  
+  //REPLACE WITH HEIGHT AND WEIGHT APIS                                                             ///////////////////////////////////////API CALLS//////////////////////////////////////////////////////
   //hard coded height 
   int _heightFt = 5;
   int _heightIn = 10;
+  //hard coded weight
+  int _weightLbs = 160;
+  //hard coded age
+  int _age = 23;
+  //hard coded email and phone number
+  String _phoneNumber = "(407) 555-1234";
+  String _email = "yoendry@example.com";
+  //hard coded joined date
+  String _joined = "Feb 2025";
+
 
   @override
   Widget build(BuildContext context) {
@@ -113,7 +123,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const SizedBox(height: 6),
           Text(
-            "yoendry@example.com",
+            _email,
             style: TextStyle(color: subTextColor, fontSize: 15),
           ),
           const SizedBox(height: 10),
@@ -122,17 +132,18 @@ class _ProfilePageState extends State<ProfilePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _InfoTile(label: "Phone", value: "(407) 555-1234", labelColor: textColor, valueColor: subTextColor),
+              _InfoTile(label: "Phone", value: _phoneNumber, labelColor: textColor, valueColor: subTextColor),
               _InfoTile(label: "Height", value: "${_heightFt}'${_heightIn}\"", labelColor: textColor, valueColor: subTextColor),
-              _InfoTile(label: "Weight", value: "160 lbs", labelColor: textColor, valueColor: subTextColor),
+              _InfoTile( label: "Weight", value: "${_weightLbs} lbs",labelColor: textColor,valueColor: subTextColor),
+
             ],
           ),
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _InfoTile(label: "Age", value: "23", labelColor: textColor, valueColor: subTextColor),
-              _InfoTile(label: "Joined", value: "Feb 2025", labelColor: textColor, valueColor: subTextColor),
+              _InfoTile(label: "Age", value: "$_age", labelColor: textColor, valueColor: subTextColor),
+              _InfoTile(label: "Joined", value: _joined, labelColor: textColor, valueColor: subTextColor),
             ],
           ),
         ],
@@ -308,22 +319,54 @@ class _ProfilePageState extends State<ProfilePage> {
 
                 // --- Input Fields ---
                 _buildTextField("Full Name", "Yoendry Ferro", textColor, subTextColor, accentColor),
-                _buildTextField("Email", "yoendry@example.com", textColor, subTextColor, accentColor),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildHeightPickerField(
-                        context,
-                        textColor,
-                        subTextColor,
-                        accentColor,
-                      ),
-                  ),
-
-                    const SizedBox(width: 12),
-                    Expanded(child: _buildTextField("Weight", "160 lbs", textColor, subTextColor, accentColor)),
-                  ],
+                _buildEditableTextField(
+                  label: "Email",
+                  initialValue: _email,
+                  onChanged: (v) => _email = v,
+                  textColor: textColor,
+                  subTextColor: subTextColor,
+                  accentColor: accentColor,
                 ),
+                _buildEditableTextField(
+                  label: "Phone",
+                  initialValue: _phoneNumber,
+                  onChanged: (v) => _phoneNumber = v,
+                  textColor: textColor,
+                  subTextColor: subTextColor,
+                  accentColor: accentColor,
+                ),
+
+
+
+                Row(
+                children: [
+                  Expanded(
+                    child: _buildHeightPickerField(
+                      context,
+                      textColor,
+                      subTextColor,
+                      accentColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildWeightPickerField(
+                      context,
+                      textColor,
+                      subTextColor,
+                      accentColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _buildAgePickerField(
+                context,
+                textColor,
+                subTextColor,
+                accentColor,
+              ),
+
 
                 const SizedBox(height: 25),
                 SizedBox(
@@ -449,6 +492,207 @@ class _ProfilePageState extends State<ProfilePage> {
       },
     );
   }
+
+
+  // ---------- WEIGHT PICKER FIELD ----------
+  Widget _buildWeightPickerField(
+    BuildContext context,
+    Color textColor,
+    Color subTextColor,
+    Color accentColor,
+  ) {
+    return GestureDetector(
+      onTap: () => _showWeightPicker(context, accentColor),
+      child: AbsorbPointer(
+        child: TextField(
+          decoration: InputDecoration(
+            labelText: "Weight",
+            hintText: "$_weightLbs lbs",
+            suffixIcon: Icon(Icons.monitor_weight, color: subTextColor),
+          ),
+          style: TextStyle(color: textColor),
+        ),
+      ),
+    );
+  }
+  // ---------- WEIGHT SCROLL PICKER ----------
+  void _showWeightPicker(BuildContext context, Color accentColor) {
+    int tempWeight = _weightLbs;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.black87,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) {
+        return SizedBox(
+          height: 300,
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              const Text(
+                "Select Weight",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Expanded(
+                child: CupertinoPicker(
+                  itemExtent: 40,
+                  scrollController: FixedExtentScrollController(
+                    initialItem: tempWeight - 80,
+                  ),
+                  onSelectedItemChanged: (i) => tempWeight = i + 80,
+                  children: List.generate(
+                    221, // 80 lbs → 300 lbs
+                    (i) => Center(
+                      child: Text(
+                        "${i + 80} lbs",
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: accentColor),
+                onPressed: () {
+                  setState(() {
+                    _weightLbs = tempWeight;
+                  });
+                  Navigator.pop(context);
+                },
+                child: const Text("Done"),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ---------- AGE PICKER FIELD ----------
+  Widget _buildAgePickerField(
+    BuildContext context,
+    Color textColor,
+    Color subTextColor,
+    Color accentColor,
+  ) {
+    return GestureDetector(
+      onTap: () => _showAgePicker(context, accentColor),
+      child: AbsorbPointer(
+        child: TextField(
+          decoration: InputDecoration(
+            labelText: "Age",
+            hintText: "$_age",
+            suffixIcon: Icon(Icons.cake, color: subTextColor),
+          ),
+          style: TextStyle(color: textColor),
+        ),
+      ),
+    );
+  }
+
+  // ---------- AGE SCROLL PICKER ----------
+  void _showAgePicker(BuildContext context, Color accentColor) {
+    int tempAge = _age;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.black87,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) {
+        return SizedBox(
+          height: 300,
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              const Text(
+                "Select Age",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Expanded(
+                child: CupertinoPicker(
+                  itemExtent: 40,
+                  scrollController:
+                      FixedExtentScrollController(initialItem: tempAge - 13),
+                  onSelectedItemChanged: (i) => tempAge = i + 13,
+                  children: List.generate(
+                    88, // Ages 13 → 100
+                    (i) => Center(
+                      child: Text(
+                        "${i + 13}",
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: accentColor),
+                onPressed: () {
+                  setState(() {
+                    _age = tempAge;
+                  });
+                  Navigator.pop(context);
+                },
+                child: const Text("Done"),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  //Editable text field for phone and email
+  Widget _buildEditableTextField({
+  required String label,
+  required String initialValue,
+  required Function(String) onChanged,
+  required Color textColor,
+  required Color subTextColor,
+  required Color accentColor,
+}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: TextFormField(
+      initialValue: initialValue,
+      style: TextStyle(color: textColor),
+      cursorColor: accentColor,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: subTextColor),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: subTextColor.withOpacity(0.3)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: accentColor, width: 1.5),
+        ),
+        filled: true,
+        fillColor: Colors.transparent,
+      ),
+    ),
+  );
+}
+
+
+
+
 
 
   Widget _buildTextField(String label, String value, Color textColor,

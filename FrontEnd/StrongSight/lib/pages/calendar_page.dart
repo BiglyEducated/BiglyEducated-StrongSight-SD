@@ -2,41 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
+import '../models/workout_models.dart';
+import '../models/exercise_catalog.dart';
+import '../models/equipment_mapper.dart';
+import 'package:uuid/uuid.dart';
 
-/// ======================================================
-/// ===================== DATA MODELS =====================
-/// ======================================================
-
-class WorkoutSet {
-  int reps;
-  double weight;
-
-  WorkoutSet({required this.reps, required this.weight});
-}
-
-class WorkoutExercise {
-  String name;
-  List<WorkoutSet> sets;
-
-  WorkoutExercise({
-    required this.name,
-    required this.sets,
-  });
-}
-
-class Workout {
-  String title;
-  List<WorkoutExercise> exercises;
-
-  Workout({
-    required this.title,
-    required this.exercises,
-  });
-}
-
-/// ======================================================
-/// ===================== CALENDAR PAGE ===================
-/// ======================================================
+final _uuid = const Uuid();
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
@@ -49,66 +20,65 @@ class _CalendarPageState extends State<CalendarPage> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
-  /// In-memory storage (replace with API/Firebase later)
   final Map<DateTime, Workout> _workoutsByDay = {};
 
-  /// Fake exercise library (later sync with Exercises page)
-  final List<String> _exerciseLibraryNames = [
-    "Squat",
-    "Bench Press",
-    "Deadlift",
-    "Bicep Curls",
-    "Pull-ups",
-    "Push-ups",
-    "Shoulder Press",
-    "Lunges",
-    "Tricep Dips",
-  ];
+  DateTime _normalize(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  /// Normalize date for Map keys
-  DateTime _normalize(DateTime d) => DateTime.utc(d.year, d.month, d.day);
-
-  Workout? _getWorkout(DateTime day) {
-    return _workoutsByDay[_normalize(day)];
-  }
+  Workout? _getWorkout(DateTime day) =>
+      _workoutsByDay[_normalize(day)];
 
   List<String> _getEventsForDay(DateTime day) {
     final workout = _getWorkout(day);
-    return workout == null ? [] : [workout.title];
+    return workout == null ? [] : [workout.workoutName];
   }
 
+  Widget _buildCalendarCell(
+  DateTime day,
+  Color textColor, {
+  bool isSelected = false,
+  Color? selectedColor,
+}) {
+  final hasWorkout = _getWorkout(day) != null;
 
-  Widget _buildCalendarCell(DateTime day, Color textColor) {
-      final hasWorkout = _getWorkout(day) != null;
-
-      return SizedBox.expand(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+  return SizedBox.expand(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Stack(
+          alignment: Alignment.center,
           children: [
+            if (isSelected)
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: selectedColor,
+                ),
+              ),
             Text(
               "${day.day}",
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: textColor,
+                color: isSelected ? Colors.white : textColor,
               ),
-            ),
-            const SizedBox(height: 4),
-            Image.asset(
-              hasWorkout
-                  ? "assets/images/OpenEyeLogo.png"
-                  : "assets/images/ClosedEyeLogo.png",
-              width: 22,
-              height: 22,
             ),
           ],
         ),
-      );
-    }
+        const SizedBox(height: 2),
+        Image.asset(
+          hasWorkout
+              ? "assets/images/OpenEyeLogo.png"
+              : "assets/images/ClosedEyeLogo.png",
+          width: 20,
+          height: 20,
+        ),
+      ],
+    ),
+  );
+}
 
-  /// ======================================================
-  /// ===================== MAIN BUILD =====================
-  /// ======================================================
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +93,8 @@ class _CalendarPageState extends State<CalendarPage> {
     final bgColor = isDark ? espresso : const Color(0xFFFCF5E3);
     final cardColor = isDark ? darkCard : Colors.white;
     final textColor = isDark ? darkGreen : lightGreen;
-    final subTextColor = isDark ? const Color(0xFFD9CBB8) : Colors.grey[700]!;
+    final subTextColor =
+        isDark ? const Color(0xFFD9CBB8) : Colors.grey[700]!;
     final accentColor = isDark ? darkGreen : lightGreen;
 
     return Scaffold(
@@ -139,15 +110,8 @@ class _CalendarPageState extends State<CalendarPage> {
           ),
         ),
       ),
-
-
-    /// ======================================================
-    /// ===================== CALENDAR CELL ==================
-    /// ======================================================
-
       body: Column(
         children: [
-          /// ===================== CALENDAR =====================
           Container(
             margin: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -158,29 +122,29 @@ class _CalendarPageState extends State<CalendarPage> {
               firstDay: DateTime.utc(2020, 1, 1),
               lastDay: DateTime.utc(2030, 12, 31),
               focusedDay: _focusedDay,
-              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+              selectedDayPredicate: (day) =>
+                  isSameDay(_selectedDay, day),
               eventLoader: _getEventsForDay,
-
-              /// 👁️ CUSTOM DAY CELLS (OPEN/CLOSED EYE)
               calendarBuilders: CalendarBuilders(
                 defaultBuilder: (context, day, _) =>
                     _buildCalendarCell(day, textColor),
-                todayBuilder: (context, day, _) => Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: accentColor.withOpacity(0.2),
-                  ),
-                  child: _buildCalendarCell(day, textColor),
-                ),
-                selectedBuilder: (context, day, _) => Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: accentColor,
-                  ),
-                  child: _buildCalendarCell(day, Colors.white),
-                ),
-              ),
 
+                todayBuilder: (context, day, _) =>
+                    _buildCalendarCell(
+                      day,
+                      textColor,
+                      isSelected: true,
+                      selectedColor: accentColor.withOpacity(0.25),
+                    ),
+
+                selectedBuilder: (context, day, _) =>
+                    _buildCalendarCell(
+                      day,
+                      textColor,
+                      isSelected: true,
+                      selectedColor: accentColor,
+                    ),
+              ),
               headerStyle: HeaderStyle(
                 titleCentered: true,
                 formatButtonVisible: false,
@@ -189,20 +153,21 @@ class _CalendarPageState extends State<CalendarPage> {
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                 ),
-                leftChevronIcon: Icon(Icons.chevron_left, color: textColor),
-                rightChevronIcon: Icon(Icons.chevron_right, color: textColor),
+                leftChevronIcon:
+                    Icon(Icons.chevron_left, color: textColor),
+                rightChevronIcon:
+                    Icon(Icons.chevron_right, color: textColor),
               ),
-
               calendarStyle: const CalendarStyle(
                 outsideDaysVisible: false,
                 markersMaxCount: 0,
               ),
-
               daysOfWeekStyle: DaysOfWeekStyle(
-                weekdayStyle: TextStyle(color: subTextColor),
-                weekendStyle: TextStyle(color: subTextColor),
+                weekdayStyle:
+                    TextStyle(color: subTextColor),
+                weekendStyle:
+                    TextStyle(color: subTextColor),
               ),
-
               onDaySelected: (selected, focused) {
                 setState(() {
                   _selectedDay = selected;
@@ -210,18 +175,15 @@ class _CalendarPageState extends State<CalendarPage> {
                 });
               },
             ),
-
           ),
-
-          /// ===================== WORKOUT PANEL =====================
           Expanded(
             child: Container(
               padding: const EdgeInsets.all(16),
-              width: double.infinity,
               decoration: BoxDecoration(
                 color: cardColor,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
               ),
               child: _buildWorkoutPanel(
                 _selectedDay ?? _focusedDay,
@@ -236,10 +198,6 @@ class _CalendarPageState extends State<CalendarPage> {
     );
   }
 
-  /// ======================================================
-  /// ===================== WORKOUT PANEL ==================
-  /// ======================================================
-
   Widget _buildWorkoutPanel(
     DateTime day,
     Color accentColor,
@@ -250,10 +208,9 @@ class _CalendarPageState extends State<CalendarPage> {
 
     if (workout == null) {
       return Center(
-        child: ElevatedButton.icon(
-          icon: const Icon(Icons.add),
-          label: const Text("Add Workout"),
+        child: ElevatedButton(
           onPressed: () => _openWorkoutForm(day),
+          child: const Text('Add Workout'),
         ),
       );
     }
@@ -262,54 +219,72 @@ class _CalendarPageState extends State<CalendarPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          /// Workout Title
           Text(
-            workout.title,
+            workout.workoutName,
             style: TextStyle(
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: accentColor,
+              color: textColor,
             ),
           ),
-          const SizedBox(height: 16),
-
-          /// Exercises + Sets
-          ...workout.exercises.map((ex) {
-            return Column(
+          const SizedBox(height: 12),
+          ...workout.exercises.map((e) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(ex.name,
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold)),
+                /// Exercise name
+                Text(
+                  e.name,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
+                  ),
+                ),
+
+                /// Equipment
+                Text(
+                  "Equipment: ${e.equipment.name}",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: subTextColor,
+                  ),
+                ),
+
                 const SizedBox(height: 4),
-                ...ex.sets.map((s) => Text(
-                      "${s.reps} reps @ ${s.weight} lbs",
-                      style: TextStyle(color: subTextColor),
-                    )),
-                const SizedBox(height: 12),
+
+                /// Sets
+                ...e.sets.asMap().entries.map((entry) {
+                  final i = entry.key + 1;
+                  final set = entry.value;
+
+                  return Text(
+                    "Set $i: ${set.reps} reps @ ${set.weight}",
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: subTextColor,
+                    ),
+                  );
+                }),
               ],
-            );
-          }),
+            ),
+          );
+        }),
 
-          const SizedBox(height: 20),
-
-          /// Actions
+          const SizedBox(height: 16),
           Row(
             children: [
-              ElevatedButton.icon(
-                icon: const Icon(Icons.edit),
-                label: const Text("Edit"),
+              ElevatedButton(
                 onPressed: () =>
                     _openWorkoutForm(day, workout: workout),
+                child: const Text("Edit"),
               ),
-              const SizedBox(width: 12),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.delete),
-                label: const Text("Delete"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
-                ),
+              const SizedBox(width: 8),
+              TextButton(
                 onPressed: () => _deleteWorkout(day),
+                child: const Text("Delete"),
               ),
             ],
           ),
@@ -318,169 +293,224 @@ class _CalendarPageState extends State<CalendarPage> {
     );
   }
 
-  /// ======================================================
-  /// ===================== WORKOUT FORM ===================
-  /// ======================================================
-
   void _openWorkoutForm(DateTime day, {Workout? workout}) {
     final titleController =
-        TextEditingController(text: workout?.title ?? '');
+        TextEditingController(text: workout?.workoutName ?? '');
 
     List<WorkoutExercise> tempExercises =
-        workout?.exercises
-                .map((e) => WorkoutExercise(
-                      name: e.name,
-                      sets: e.sets
-                          .map((s) =>
-                              WorkoutSet(reps: s.reps, weight: s.weight))
-                          .toList(),
-                    ))
-                .toList() ??
-            [];
+        workout?.exercises.map((e) => e.copyWith()).toList() ?? [];
+
+    final exerciseMap = {
+      for (final e in exerciseCatalog) e.name: e,
+    };
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setModalState) {
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                16,
-                16,
-                16,
-                MediaQuery.of(ctx).viewInsets.bottom + 16,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    /// Workout Name
-                    TextField(
-                      controller: titleController,
-                      decoration: const InputDecoration(
-                          labelText: 'Workout Title'),
-                    ),
-                    const SizedBox(height: 16),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            MediaQuery.of(ctx).viewInsets.bottom + 16,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration:
+                      const InputDecoration(labelText: 'Workout Title'),
+                ),
+                const SizedBox(height: 16),
+                ...tempExercises.map((exercise) {
+                  final def = exerciseMap[exercise.name];
+                  final equipmentTypes =
+                      def?.equipment ?? const <EquipmentType>[];
 
-                    /// Exercises
-                    const Text("Exercises",
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
+                  if (equipmentTypes.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
 
-                    ...tempExercises.map((exercise) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(exercise.name,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold)),
-                          ...exercise.sets.map((set) {
-                            return Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    keyboardType: TextInputType.number,
-                                    decoration:
-                                        const InputDecoration(labelText: "Reps"),
-                                    onChanged: (v) =>
-                                        set.reps = int.tryParse(v) ?? 0,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: TextField(
-                                    keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
-                                        labelText: "Weight(lbs)"),
-                                    onChanged: (v) =>
-                                        set.weight = double.tryParse(v) ?? 0,
-                                  ),
-                                ),
-                              ],
-                            );
-                          }),
-                          TextButton.icon(
-                            icon: const Icon(Icons.add),
-                            label: const Text("Add Set"),
-                            onPressed: () {
-                              setModalState(() {
-                                exercise.sets
-                                    .add(WorkoutSet(reps: 10, weight: 0));
-                              });
-                            },
-                          ),
-                          const Divider(),
-                        ],
-                      );
-                    }),
-
-                    /// Add Exercise Button
-                    TextButton.icon(
-                      icon: const Icon(Icons.add),
-                      label: const Text("Add Exercise"),
-                      onPressed: () async {
-                        final selected = await _selectExerciseDialog();
-                        if (selected != null) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        exercise.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      DropdownButtonFormField<EquipmentType>(
+                        value: equipmentTypes.firstWhere(
+                          (e) =>
+                              mapEquipmentTypeToEquipment(e).id ==
+                              exercise.equipment.id,
+                          orElse: () => equipmentTypes.first,
+                        ),
+                        items: equipmentTypes
+                            .map(
+                              (e) => DropdownMenuItem(
+                                value: e,
+                                child: Text(equipmentLabel(e)),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (newType) {
+                          if (newType == null) return;
+                          final i =
+                              tempExercises.indexOf(exercise);
                           setModalState(() {
-                            tempExercises.add(
-                              WorkoutExercise(name: selected, sets: [
-                                WorkoutSet(reps: 10, weight: 0),
-                              ]),
+                            tempExercises[i] = exercise.copyWith(
+                              equipment:
+                                  mapEquipmentTypeToEquipment(newType),
                             );
                           });
-                        }
-                      },
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    /// Save Workout
-                    ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          _workoutsByDay[_normalize(day)] = Workout(
-                            title: titleController.text,
-                            exercises: tempExercises,
-                          );
-                        });
-                        Navigator.pop(ctx);
-                      },
-                      child: Text(
-                          workout == null ? 'Create Workout' : 'Save Changes'),
-                    ),
-                  ],
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      ...exercise.sets.map((set) {
+                        final setIndex =
+                            exercise.sets.indexOf(set);
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                initialValue:
+                                    set.reps.toString(),
+                                keyboardType:
+                                    TextInputType.number,
+                                decoration:
+                                    const InputDecoration(labelText: 'Reps'),
+                                onChanged: (v) {
+                                  final updated =
+                                      [...exercise.sets];
+                                  updated[setIndex] = set.copyWith(
+                                    reps:
+                                        int.tryParse(v) ?? set.reps,
+                                  );
+                                  final i =
+                                      tempExercises.indexOf(exercise);
+                                  setModalState(() {
+                                    tempExercises[i] =
+                                        exercise.copyWith(sets: updated);
+                                  });
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextFormField(
+                                initialValue:
+                                    set.weight.toString(),
+                                keyboardType:
+                                    TextInputType.number,
+                                decoration:
+                                    const InputDecoration(labelText: 'Weight'),
+                                onChanged: (v) {
+                                  final updated =
+                                      [...exercise.sets];
+                                  updated[setIndex] = set.copyWith(
+                                    weight:
+                                        int.tryParse(v) ?? set.weight,
+                                  );
+                                  final i =
+                                      tempExercises.indexOf(exercise);
+                                  setModalState(() {
+                                    tempExercises[i] =
+                                        exercise.copyWith(sets: updated);
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        );
+                      }),
+                      TextButton.icon(
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Set'),
+                        onPressed: () {
+                          final i =
+                              tempExercises.indexOf(exercise);
+                          setModalState(() {
+                            tempExercises[i] = exercise.copyWith(
+                              sets: [
+                                ...exercise.sets,
+                                WorkoutSet(reps: 10, weight: 0),
+                              ],
+                            );
+                          });
+                        },
+                      ),
+                      const Divider(),
+                    ],
+                  );
+                }),
+                TextButton.icon(
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Exercise'),
+                  onPressed: () async {
+                    final selected =
+                        await _selectExerciseDialog();
+                    if (selected == null) return;
+                    setModalState(() {
+                      tempExercises.add(
+                        WorkoutExercise(
+                          id: _uuid.v4(),
+                          name: selected.name,
+                          equipment:
+                              mapEquipmentTypeToEquipment(
+                                  selected.equipment.first),
+                          sets: [WorkoutSet(reps: 10, weight: 0)],
+                        ),
+                      );
+                    });
+                  },
                 ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  /// ======================================================
-  /// ===================== EXERCISE PICKER =================
-  /// ======================================================
-
-  Future<String?> _selectExerciseDialog() {
-    return showDialog<String>(
-      context: context,
-      builder: (_) => SimpleDialog(
-        title: const Text("Select Exercise"),
-        children: _exerciseLibraryNames
-            .map((name) => SimpleDialogOption(
-                  child: Text(name),
-                  onPressed: () => Navigator.pop(context, name),
-                ))
-            .toList(),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _workoutsByDay[_normalize(day)] = Workout(
+                        id: workout?.id ?? _uuid.v4(),
+                        workoutName: titleController.text,
+                        date: _normalize(day),
+                        exercises: tempExercises,
+                      );
+                    });
+                    Navigator.pop(ctx);
+                  },
+                  child:
+                      Text(workout == null ? 'Create' : 'Save'),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  /// ======================================================
-  /// ===================== DELETE WORKOUT =================
-  /// ======================================================
+  Future<ExerciseDefinition?> _selectExerciseDialog() {
+    return showDialog<ExerciseDefinition>(
+      context: context,
+      builder: (_) => SimpleDialog(
+        title: const Text("Select Exercise"),
+        children: exerciseCatalog
+            .map(
+              (ex) => SimpleDialogOption(
+                child: Text(ex.name),
+                onPressed: () =>
+                    Navigator.pop(context, ex),
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
 
   void _deleteWorkout(DateTime day) {
     setState(() {

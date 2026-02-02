@@ -2,12 +2,59 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 
+
+String _formatWorkoutDate(DateTime date) {
+  const months = [
+    "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+  return "${months[date.month]} ${date.day}";
+}
+
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
+
+
+//Workout data models
+class Workout {
+  final String workoutName;
+  final DateTime date;
+  final List<WorkoutExercise> exercises;
+
+  Workout({
+    required this.workoutName,
+    required this.exercises,
+    required this.date,
+  });
+}
+
+class WorkoutExercise {
+  final String name;
+  final String equipment;
+  final List<WorkoutSet> sets;
+
+  WorkoutExercise({
+    required this.name,
+    required this.sets,
+    required this.equipment,
+  });
+}
+
+class WorkoutSet {
+  final int reps;
+  final int weight;
+
+  WorkoutSet({
+    required this.reps,
+    required this.weight,
+  });
+}
+
 
 class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
@@ -19,84 +66,162 @@ class _HomePageState extends State<HomePage>
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
+  late Color workoutTitleColor;
+  late Color exerciseNameColor;
+
+
   int _streakDays = 0;
   int? _expandedWorkoutIndex;
+  
 
   // --------------------- Today's Workout --------------------------------------------
-  final Map<String, dynamic> todaysWorkout = {
-    "title": "Push Day",
-    "focus": "Chest, Shoulders, Triceps",
-    "duration": "1h 15m",
-    "exercises": [
-      {"name": "Bench Press", "sets": "4 x 8"},
-      {"name": "Overhead Press", "sets": "3 x 10"},
-      {"name": "Tricep Dips", "sets": "3 x 12"},
-    ]
-  };
+  Workout? todaysWorkout =Workout(                                                                             //////////API FOR TODAYS WORKOUT GOES HERE//////////////////////////////////////////////////////
+  workoutName: "Leetcode Session",
+  date: DateTime.now(),
+  exercises: [
+    WorkoutExercise(
+      name: "Squat",
+      equipment: "Barbell",
+      sets: [
+        WorkoutSet(reps: 8, weight: 135),
+        WorkoutSet(reps: 8, weight: 135),
+        WorkoutSet(reps: 6, weight: 145),
+      ],
+    ),
+    WorkoutExercise(
+      name: "Bench Press",
+      equipment: "Barbell",
+      sets: [
+        WorkoutSet(reps: 10, weight: 95),
+      ],
+    ),
+    WorkoutExercise(
+      name: "Bicep Curls",
+      equipment: "Dumbbell",
+      sets: [
+        WorkoutSet(reps: 12, weight: 25),
+        WorkoutSet(reps: 12, weight: 25),
+      ],
+    ),
+  ],
+);
+
 
 // --------------------- Recent Workouts ---------------------------------------------
-  final List<Map<String, dynamic>> workouts = [
-    {
-      "title": "Push Day",
-      "date": "Nov 4",
-      "duration": "1h 10m",
-      "exercises": [
-        {"name": "Bench Press", "sets": "4 x 8"},
-        {"name": "Incline Dumbbell Press", "sets": "3 x 10"},
-        {"name": "Tricep Dips", "sets": "3 x 12"},
-      ]
-    },
-    {
-      "title": "Leg Day",
-      "date": "Nov 3",
-      "duration": "1h 25m",
-      "exercises": [
-        {"name": "Back Squat", "sets": "5 x 5"},
-        {"name": "Leg Press", "sets": "4 x 10"},
-        {"name": "Calf Raises", "sets": "3 x 15"},
-      ]
-    },
-    {
-      "title": "Cardio + Core",
-      "date": "Nov 2",
-      "duration": "50m",
-      "exercises": [
-        {"name": "Treadmill Run", "sets": "30 min"},
-        {"name": "Plank", "sets": "3 x 1 min"},
-        {"name": "Crunches", "sets": "3 x 20"},
-      ]
-    },
-    {
-      "title": "Arm Day",
-      "date": "Nov 4",
-      "duration": "1h 10m",
-      "exercises": [
-        {"name": "Bench Press", "sets": "4 x 8"},
-        {"name": "Incline Dumbbell Press", "sets": "3 x 10"},
-        {"name": "Tricep Dips", "sets": "3 x 12"},
-      ]
-    },
-    {
-      "title": "Core day",
-      "date": "Nov 3",
-      "duration": "1h 25m",
-      "exercises": [
-        {"name": "Back Squat", "sets": "5 x 5"},
-        {"name": "Leg Press", "sets": "4 x 10"},
-        {"name": "Calf Raises", "sets": "3 x 15"},
-      ]
-    },
-    {
-      "title": "Cardio",
-      "date": "Nov 2",
-      "duration": "50m",
-      "exercises": [
-        {"name": "Treadmill Run", "sets": "30 min"},
-        {"name": "Plank", "sets": "3 x 1 min"},
-        {"name": "Crunches", "sets": "3 x 20"},
-      ]
-    },
+  final List<Workout> recentWorkouts = [
+    Workout(
+      workoutName: "Push Day",
+      date: DateTime.now().subtract(const Duration(days: 1)),
+      exercises: [
+        WorkoutExercise(
+          name: "Bench Press",
+          equipment: "Barbell",
+          sets: [
+            WorkoutSet(reps: 8, weight: 135),
+            WorkoutSet(reps: 8, weight: 135),
+            WorkoutSet(reps: 8, weight: 135),
+            WorkoutSet(reps: 8, weight: 135),
+          ],
+        ),
+        WorkoutExercise(
+          name: "Incline Dumbbell Press",
+          equipment: "Dumbbell",
+          sets: [
+            WorkoutSet(reps: 10, weight: 50),
+            WorkoutSet(reps: 10, weight: 50),
+            WorkoutSet(reps: 10, weight: 50),
+          ],
+        ),
+      ],
+    ),
+
+    Workout(
+      workoutName: "Leg Day",
+      date: DateTime.now().subtract(const Duration(days: 1)),
+      exercises: [
+        WorkoutExercise(
+          name: "Back Squat",
+          equipment: "Barbell",
+          sets: [
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+          ],
+        ),
+      ],
+    ),
+    Workout(
+      workoutName: "Chest Day",
+      date: DateTime.now().subtract(const Duration(days: 1)),
+      exercises: [
+        WorkoutExercise(
+          name: "Back Squat",
+          equipment: "Barbell",
+          sets: [
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+          ],
+        ),
+      ],
+    ),
+    Workout(
+      workoutName: "Arm Day",
+      date: DateTime.now().subtract(const Duration(days: 1)),
+      exercises: [
+        WorkoutExercise(
+          name: "Back Squat",
+          equipment: "Barbell",
+          sets: [
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+          ],
+        ),
+      ],
+    ),
+    Workout(
+      workoutName: "Back Day",
+      date: DateTime.now().subtract(const Duration(days: 1)),
+      exercises: [
+        WorkoutExercise(
+          name: "Back Squat",
+          equipment: "Barbell",
+          sets: [
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+          ],
+        ),
+      ],
+    ),
+    Workout(
+      workoutName: "Cardio Day",
+      date: DateTime.now().subtract(const Duration(days: 1)),
+      exercises: [
+        WorkoutExercise(
+          name: "Back Squat",
+          equipment: "Barbell",
+          sets: [
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+            WorkoutSet(reps: 5, weight: 225),
+          ],
+        ),
+      ],
+    ),
   ];
+
 
   // --------------------- WEEKLY STREAK LOGIC ---------------------------------------------
   DateTime _parseWorkoutDate(String dateString) {
@@ -158,7 +283,7 @@ class _HomePageState extends State<HomePage>
 
     for (final date in weekDates) {
       final formatted = "${_monthNumberToStr(date.month)} ${date.day}";
-      final hasWorkout = workouts.any((w) => w["date"] == formatted);
+      final hasWorkout = recentWorkouts.isNotEmpty;
       if (hasWorkout) count++;
     }
 
@@ -201,6 +326,11 @@ class _HomePageState extends State<HomePage>
     final bgColor = isDark ? espresso : const Color(0xFFFCF5E3);
     final cardColor = isDark ? const Color(0xFF1A1917) : Colors.white;
     final primaryTextColor = isDark ? darkModeGreen : lightModeGreen;
+    workoutTitleColor =
+    isDark ? const Color.fromARGB(255, 197, 183, 142) : lightModeGreen;
+    exerciseNameColor =
+    isDark ? const Color.fromARGB(255, 198, 184, 143) : lightModeGreen;
+
     final subTextColor =
         isDark ? const Color(0xFFD9CBB8) : Colors.grey[700]!;
     final accentColor = isDark ? darkModeGreen : lightModeGreen;
@@ -366,7 +496,7 @@ class _HomePageState extends State<HomePage>
       padding: const EdgeInsets.all(20),
       child: Row(
         children: [
-          Icon(Icons.local_fire_department, color: accentColor, size: 42),
+          Icon(Icons.local_fire_department, color: Color.fromARGB(255, 173, 17, 17), size: 42),
           const SizedBox(width: 16),
           Expanded(
             child:
@@ -390,7 +520,7 @@ class _HomePageState extends State<HomePage>
                       margin: const EdgeInsets.symmetric(horizontal: 1),
                       decoration: BoxDecoration(
                         color:
-                            v > 0 ? accentColor : subTextColor.withOpacity(0.3),
+                            v > 0 ? Color(0xFFFF0000) : Color.fromARGB(255, 200, 59, 12),
                         borderRadius: BorderRadius.circular(3),
                       ),
                     ),
@@ -404,88 +534,205 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  // ---------- Today's Workout ----------
-  Widget _buildTodaysWorkout(Color cardColor, Color textColor,
-      Color subTextColor, Color accentColor) {
-    final bool hasWorkout =
-        todaysWorkout["exercises"] != null &&
-            (todaysWorkout["exercises"] as List).isNotEmpty;
+  Widget _buildNoWorkoutCard(
+  Color cardColor,
+  Color subTextColor,
+  Color accentColor,
+) {
+  return Container(
+    decoration: BoxDecoration(
+      color: cardColor,
+      borderRadius: BorderRadius.circular(14),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 6,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    ),
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      children: [
+        Icon(Icons.event_available,
+            color: subTextColor.withOpacity(0.7), size: 36),
+        const SizedBox(height: 10),
+        Text(
+          "No workout scheduled for today",
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: subTextColor,
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.calendar_today, size: 18),
+            label: const Text("Set Workout in Calendar"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accentColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 0,
+            ),
+            onPressed: () {
+              Navigator.pushNamed(context, '/calendar');
+            },
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 6,
-              offset: const Offset(0, 4))
-        ],
-      ),
-      padding: const EdgeInsets.all(16),
-      child: hasWorkout
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(todaysWorkout["title"],
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: accentColor)),
-                const SizedBox(height: 4),
-                Text(todaysWorkout["focus"],
-                    style: TextStyle(color: subTextColor, fontSize: 14)),
-                const SizedBox(height: 10),
-                ...(todaysWorkout["exercises"] as List).map<Widget>((exercise) {
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(exercise["name"],
-                          style: TextStyle(
-                              color: textColor, fontWeight: FontWeight.w500)),
-                      Text(exercise["sets"],
-                          style:
-                              TextStyle(color: subTextColor, fontSize: 14)),
-                    ],
-                  );
-                }).toList(),
-                const SizedBox(height: 10),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Text(
-                    "Est. Duration: ${todaysWorkout["duration"]}",
-                    style: TextStyle(
-                        color: subTextColor,
-                        fontSize: 13,
-                        fontStyle: FontStyle.italic),
-                  ),
+
+  // ---------- Today's Workout ----------
+  Widget _buildTodaysWorkout(
+  Color cardColor,
+  Color textColor,
+  Color subTextColor,
+  Color accentColor,
+) {
+  final bool hasWorkout =
+      todaysWorkout != null && todaysWorkout!.exercises.isNotEmpty;
+
+  return hasWorkout
+      ? GestureDetector(
+          onTap: () => setState(() {
+            _expandedWorkoutIndex =
+                _expandedWorkoutIndex == -1 ? null : -1;
+          }),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            margin: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 6,
+                  offset: const Offset(0, 4),
                 ),
               ],
-            )
-          : Center(
-              child: Column(
-                children: [
-                  Icon(Icons.hotel,
-                      color: subTextColor.withOpacity(0.7), size: 36),
-                  const SizedBox(height: 10),
-                  Text("No workout planned,\nEnjoy your rest day",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: subTextColor,
-                          fontSize: 15,
-                          fontStyle: FontStyle.italic)),
-                ],
-              ),
             ),
-    );
-  }
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ---- Header----
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      todaysWorkout!.workoutName,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: workoutTitleColor,
+                      ),
+                    ),
+                    Icon(
+                      _expandedWorkoutIndex == -1
+                          ? Icons.expand_less
+                          : Icons.expand_more,
+                      color: subTextColor,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 4),
+
+                // ---- Expandable Per-Set Details ----
+                AnimatedCrossFade(
+                  firstChild: const SizedBox.shrink(),
+                  secondChild: Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Column(
+                      children: todaysWorkout!.exercises.map((exercise) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Exercise Name
+                              Text(
+                                exercise.name,
+                                style: TextStyle(
+                                  color: exerciseNameColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                exercise.equipment,
+                                style: TextStyle(
+                                  color: subTextColor,
+                                  fontSize: 12,
+                                ),),
+                              const SizedBox(height: 4),
+
+                              // Individual Sets
+                              ...List.generate(exercise.sets.length, (i) {
+                                final set = exercise.sets[i];
+
+                                return Padding(
+                                  padding: const EdgeInsets.only(
+                                      left: 12, top: 2, bottom: 2),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        "Set ${i + 1}",
+                                        style: TextStyle(
+                                          color: subTextColor,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      Text(
+                                        "${set.reps} @ ${set.weight}",
+                                        style: TextStyle(
+                                          color: accentColor,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  crossFadeState: _expandedWorkoutIndex == -1
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
+                  duration: const Duration(milliseconds: 200),
+                ),
+              ],
+            ),
+          ),
+        )
+      : _buildNoWorkoutCard(cardColor, subTextColor, accentColor);
+}
+
+
 
   // ---------- Expandable Recent Workouts ----------
   Widget _buildExpandableWorkoutList(
-      Color cardColor, Color textColor, Color subTextColor, Color accentColor) {
+      Color cardColor, Color textColor, Color subTextColor, Color accentColor,) {
     
     //Takes the 6 most recent workouts
-    final recent = workouts.take(6).toList();
+    final recent = recentWorkouts.take(6).toList();
 
     return Column(
       children: List.generate(recent.length, (index) {
@@ -515,11 +762,11 @@ class _HomePageState extends State<HomePage>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(workout["title"],
+                      Text(workout.workoutName,
                           style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: accentColor)),
+                              color: exerciseNameColor)),
                       Icon(isExpanded ? Icons.expand_less : Icons.expand_more,
                           color: subTextColor)
                     ],
@@ -528,12 +775,8 @@ class _HomePageState extends State<HomePage>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(workout["date"],
+                      Text(_formatWorkoutDate(workout.date),
                           style: TextStyle(color: subTextColor, fontSize: 14)),
-                      Text(workout["duration"],
-                          style: TextStyle(
-                              color: subTextColor,
-                              fontWeight: FontWeight.w500)),
                     ],
                   ),
                   AnimatedCrossFade(
@@ -542,26 +785,59 @@ class _HomePageState extends State<HomePage>
                       padding: const EdgeInsets.only(top: 12),
                       child: Column(
                         children: [
-                          ...workout["exercises"].map<Widget>((e) {
-                            return Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 2),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(e["name"],
+                          Column(
+                            children: workout.exercises.map((exercise) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 6),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      exercise.name,
                                       style: TextStyle(
-                                          color: textColor,
-                                          fontWeight: FontWeight.w500)),
-                                  Text(e["sets"],
+                                        color: exerciseNameColor,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    Text(
+                                      exercise.equipment,
                                       style: TextStyle(
-                                          color: subTextColor,
-                                          fontSize: 13)),
-                                ],
-                              ),
-                            );
-                          }).toList(),
+                                        color: subTextColor,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+
+                                    ...List.generate(exercise.sets.length, (i) {
+                                      final set = exercise.sets[i];
+                                      return Padding(
+                                        padding: const EdgeInsets.only(left: 12, top: 2),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              "Set ${i + 1}",
+                                              style: TextStyle(
+                                                color: subTextColor,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                            Text(
+                                              "${set.reps} @ ${set.weight}",
+                                              style: TextStyle(
+                                                color: accentColor,
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }),
+                                  ],
+                                ),
+                              );
+                            }).toList(),)
                         ],
                       ),
                     ),
@@ -627,8 +903,8 @@ class _HomePageState extends State<HomePage>
   }
 
   // ---------- PR TRACKER ----------
-  Widget _buildPRTracker(Color cardColor, Color textColor,
-      Color subTextColor, Color accentColor) {
+  Widget _buildPRTracker(Color cardColor, Color textColor, Color accentColor,
+      Color subTextColor,) {
     final prs = [
       {"lift": "Bench Press", "weight": "205 lbs", "date": "October 26, 2025"},
       {"lift": "Squat", "weight": "275 lbs", "date": "September 1, 2025"},
@@ -659,7 +935,7 @@ class _HomePageState extends State<HomePage>
                     style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: textColor)),
+                        color: exerciseNameColor)),
                 const SizedBox(height: 4),
                 Text(p["date"]!,
                     style: TextStyle(fontSize: 12, color: subTextColor))

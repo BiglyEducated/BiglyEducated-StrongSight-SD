@@ -18,7 +18,8 @@ class _WorkoutPageState extends State<WorkoutPage> {
     "Squat",
     "Bench Press",
     "Deadlift",
-    "Bicep Curls",
+    "Overhead Press",
+    "Barbell Row",
   ];
 
   void _startRecording() {
@@ -43,7 +44,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
         _scrollController.animateTo(
           0,
           duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
+          curve: Curves.ease
         );
       }
     });
@@ -229,7 +230,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
             ),
             child: Center(
               child: Text(
-                "🎥 Video Demonstration Here (Coming Soon)",
+                "🎥 Video Demonstration Here",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: subTextColor,
