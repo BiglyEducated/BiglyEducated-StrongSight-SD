@@ -10,6 +10,7 @@ export const signupUser = async (req, res) => {
     phoneNumber,
     gender,
     weight,
+    age,
     heightFt,
     heightIn,
   } = req.body;
@@ -22,6 +23,7 @@ export const signupUser = async (req, res) => {
       phoneNumber,
       gender,
       weight,
+      age,
       heightFt,
       heightIn,
       createdAt: new Date(),
@@ -282,5 +284,3 @@ export const addWorkout = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-
-//this is a test
