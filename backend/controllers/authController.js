@@ -144,6 +144,62 @@ export const getUserInfo = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+export const editUserInfo = async (req, res) => {
+  try {
+    // Extract token from header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing or invalid token" });
+    }
+
+    const idToken = authHeader.split("Bearer ")[1];
+
+    // Verify token and extract UID
+    const decodedToken = await getAuth().verifyIdToken(idToken);
+    const uid = decodedToken.uid;
+
+    // Extract fields from request body
+    const { displayName, email, phoneNumber, heightFt, heightIn, weight, age } = req.body;
+
+    // Build update object with only provided fields
+    const updateData = {};
+    if (displayName !== undefined) updateData.displayName = displayName;
+    if (email !== undefined) updateData.email = email;
+    if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+    if (heightFt !== undefined) updateData.heightFt = heightFt;
+    if (heightIn !== undefined) updateData.heightIn = heightIn;
+    if (weight !== undefined) updateData.weight = weight;
+    if (age !== undefined) updateData.age = age;
+
+    // Add updatedAt timestamp
+    updateData.updatedAt = new Date();
+
+    // Check if there's anything to update
+    if (Object.keys(updateData).length === 1) { // Only updatedAt
+      return res.status(400).json({ error: "No fields provided to update" });
+    }
+
+    // Check if user exists
+    const userDoc = await db.collection("users").doc(uid).get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: "User not found in Firestore" });
+    }
+
+    // Update user document in Firestore
+    await db.collection("users").doc(uid).update(updateData);
+
+    // Return updated data
+    return res.status(200).json({
+      message: "User info updated successfully",
+      data: updateData,
+    });
+  } catch (error) {
+    console.error("Error updating user info:", error);
+    return res.status(500).json({ error: error.message });
+  }
+}
+
 export const getUserWorkouts = async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
