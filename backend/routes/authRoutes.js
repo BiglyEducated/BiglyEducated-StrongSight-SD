@@ -1,5 +1,5 @@
 import express from "express";
-import { signupUser, verifyToken, deleteUser, getUserInfo, editUserInfo, addWorkout} from "../controllers/authController.js";
+import { signupUser, verifyToken, deleteUser, getUserInfo, editUserInfo, addWorkout, getUserWorkouts} from "../controllers/authController.js";
 import { get } from "http";
 
 const router = express.Router();
@@ -17,4 +17,5 @@ router.put('/edit-userInfo', editUserInfo);
 
 //workouts
 router.post('/add-workout', addWorkout);
+router.get('/get-userWorkouts', getUserWorkouts);
 export default router;

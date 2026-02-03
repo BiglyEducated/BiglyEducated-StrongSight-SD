@@ -84,6 +84,97 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _loadWorkoutsFromAPI();
+  }
+
+  Future<void> _loadWorkoutsFromAPI() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        _showSnackBar("No user logged in");
+        return;
+      }
+
+      final idToken = await user.getIdToken();
+
+      final uri = Uri.parse('$BASE_URL/api/auth/get-userWorkouts');
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $idToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body);
+        final workoutsData = jsonResponse['data'] as Map<String, dynamic>;
+
+        setState(() {
+          _workoutsByDay.clear();
+
+          // Parse each workout from the API response
+          workoutsData.forEach((dateString, workoutJson) {
+            try {
+              // Ensure workoutJson is a Map and has required fields
+              if (workoutJson is! Map<String, dynamic>) {
+                print('Invalid workout format for $dateString: $workoutJson');
+                return;
+              }
+
+              // Parse the date
+              final parsedDate = DateTime.parse(dateString);
+              final normalizedDate = _normalize(parsedDate);
+
+              // Parse exercises with generated IDs
+              final exercises = (workoutJson['exercises'] as List?)
+                      ?.cast<Map<String, dynamic>>()
+                      .map((e) => WorkoutExercise(
+                            id: _uuid.v4(), // Generate ID for exercise
+                            name: e['name'] ?? 'Unknown',
+                            equipment: Equipment(
+                              id: e['equipment']?['id'] ?? 'unknown',
+                              name: e['equipment']?['name'] ?? 'Unknown',
+                            ),
+                            sets: (e['sets'] as List?)
+                                    ?.cast<Map<String, dynamic>>()
+                                    .map((s) => WorkoutSet(
+                                          reps: s['reps'] as int? ?? 0,
+                                          weight: s['weight'] as int? ?? 0,
+                                        ))
+                                    .toList() ??
+                                [],
+                          ))
+                      .toList() ??
+                  [];
+
+              // Manually construct the Workout to handle nulls
+              final workout = Workout(
+                id: workoutJson['id'] ?? _uuid.v4(),
+                workoutName: workoutJson['workoutName'] ?? 'Untitled',
+                date: normalizedDate,
+                exercises: exercises,
+              );
+
+              _workoutsByDay[normalizedDate] = workout;
+            } catch (e) {
+              print('Error parsing workout for $dateString: $e');
+            }
+          });
+        });
+
+        print('✅ Loaded ${_workoutsByDay.length} workouts');
+      } else {
+        _showSnackBar("Failed to load workouts: ${response.statusCode}");
+      }
+    } catch (e) {
+      _showSnackBar("Error loading workouts: $e");
+      print('❌ Error: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
 
