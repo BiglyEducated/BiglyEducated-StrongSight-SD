@@ -218,32 +218,53 @@ export const getUserWorkouts = async (req, res) => {
       .get();
 
     if (snapshot.empty) {
-      return res.status(404).json({ error: "No workouts found for this user" });
+      return res.status(200).json({
+        message: "No workouts found for this user",
+        data: {},
+      });
     }
 
-    // Map the workouts and sort by date in JavaScript
-    const workouts = snapshot.docs
-      .map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          title: data.title,
-          date: data.date, // This is a Firestore Timestamp
-          duration: data.duration,
-          exercises: data.exercises,
-          uid: data.uid,
-        };
-      })
-      .sort((a, b) => {
-        // Sort by date descending (most recent first)
-        const dateA = a.date?.toMillis?.() || 0;
-        const dateB = b.date?.toMillis?.() || 0;
-        return dateB - dateA;
-      });
+    // Transform workouts into Map format with date as key
+    const workoutsByDate = {};
+
+    snapshot.docs.forEach(doc => {
+      const data = doc.data();
+      
+      // Convert Firestore Timestamp to ISO date string (YYYY-MM-DD)
+      let dateString;
+      if (data.date?.toDate) {
+        // Firestore Timestamp
+        dateString = data.date.toDate().toISOString().split('T')[0];
+      } else if (typeof data.date === 'string') {
+        // Already a string
+        dateString = data.date.split('T')[0];
+      } else {
+        // Fallback to today
+        dateString = new Date().toISOString().split('T')[0];
+      }
+
+      // Build the workout object in the new format
+      workoutsByDate[dateString] = {
+        id: doc.id,
+        workoutName: data.workoutName || data.title || "Untitled",
+        date: dateString,
+        exercises: (data.exercises || []).map(ex => ({
+          name: ex.name,
+          equipment: {
+            id: ex.equipment?.id || "unknown",
+            name: ex.equipment?.name || "Unknown",
+          },
+          sets: (ex.sets || []).map(set => ({
+            reps: set.reps || 0,
+            weight: set.weight || 0,
+          })),
+        })),
+      };
+    });
 
     return res.status(200).json({
       message: "User workouts fetched successfully",
-      data: workouts,
+      data: workoutsByDate,
     });
   } catch (error) {
     console.error("Error fetching user workouts:", error);
@@ -283,11 +304,54 @@ export const getUserWorkoutsByDate = async (req, res) => {
       .where("date", "<=", endDate)
       .get();
 
-    const filteredWorkouts = workoutsSnapshot.docs.map(doc => doc.data());
+    if (workoutsSnapshot.empty) {
+      return res.status(200).json({
+        message: "No workouts found for this user in the date range",
+        data: {},
+      });
+    }
+
+    // Transform workouts into Map format with date as key
+    const workoutsByDate = {};
+
+    workoutsSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      
+      // Convert Firestore Timestamp to ISO date string (YYYY-MM-DD)
+      let dateString;
+      if (data.date?.toDate) {
+        // Firestore Timestamp
+        dateString = data.date.toDate().toISOString().split('T')[0];
+      } else if (typeof data.date === 'string') {
+        // Already a string
+        dateString = data.date.split('T')[0];
+      } else {
+        // Fallback to today
+        dateString = new Date().toISOString().split('T')[0];
+      }
+
+      // Build the workout object in the new format
+      workoutsByDate[dateString] = {
+        id: doc.id,
+        workoutName: data.workoutName || data.title || "Untitled",
+        date: dateString,
+        exercises: (data.exercises || []).map(ex => ({
+          name: ex.name,
+          equipment: {
+            id: ex.equipment?.id || "unknown",
+            name: ex.equipment?.name || "Unknown",
+          },
+          sets: (ex.sets || []).map(set => ({
+            reps: set.reps || 0,
+            weight: set.weight || 0,
+          })),
+        })),
+      };
+    });
 
     return res.status(200).json({
       message: "User workouts fetched successfully for date range",
-      data: filteredWorkouts,
+      data: workoutsByDate,
     });
   } catch (error) {
     console.error("Error fetching user workouts by date:", error);
@@ -297,7 +361,7 @@ export const getUserWorkoutsByDate = async (req, res) => {
 
 /**
  * ADD WORKOUT
- * Expects body: { title, date, duration, exercises }
+ * Expects body: { workoutName, date (ISO string), exercises }
  * Requires Authorization: Bearer <token>
  */
 export const addWorkout = async (req, res) => {
@@ -311,9 +375,9 @@ export const addWorkout = async (req, res) => {
     const decodedToken = await getAuth().verifyIdToken(idToken);
     const uid = decodedToken.uid;
 
-    const { title, date, duration, exercises } = req.body;
+    const { workoutName, date, exercises } = req.body;
 
-    if (!title || !date || !duration || !exercises) {
+    if (!workoutName || !date || !exercises) {
       return res.status(400).json({ error: "Missing required workout fields" });
     }
 
@@ -321,10 +385,9 @@ export const addWorkout = async (req, res) => {
     const workoutDate = typeof date === "string" ? new Date(date) : date;
 
     const workoutData = {
-      title,
+      workoutName,
       date: workoutDate, // Firestore will store as Timestamp
-      duration,
-      exercises,
+      exercises, // Already in correct format: { name, equipment: { id, name }, sets: [{ reps, weight }] }
       uid,
     };
 
@@ -333,7 +396,12 @@ export const addWorkout = async (req, res) => {
     return res.status(201).json({
       message: "Workout added successfully",
       id: docRef.id,
-      data: workoutData,
+      data: {
+        id: docRef.id,
+        workoutName,
+        date: date, // Return as ISO string
+        exercises,
+      },
     });
   } catch (error) {
     console.error("Error adding workout:", error);
