@@ -161,7 +161,9 @@ class _ProfilePageState extends State<ProfilePage> {
           await user.updateDisplayName(_editDisplayName);
         } catch (e) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to update display name in Firebase Auth: $e')),
+            SnackBar(
+                content:
+                    Text('Failed to update display name in Firebase Auth: $e')),
           );
         }
       }
@@ -172,13 +174,15 @@ class _ProfilePageState extends State<ProfilePage> {
           await user.verifyBeforeUpdateEmail(_editEmail);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Verification email sent. Please verify your new email address.'),
+              content: Text(
+                  'Verification email sent. Please verify your new email address.'),
               duration: Duration(seconds: 4),
             ),
           );
         } catch (e) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to update email in Firebase Auth: $e')),
+            SnackBar(
+                content: Text('Failed to update email in Firebase Auth: $e')),
           );
           // Don't return false here - continue with other updates
         }
@@ -231,6 +235,61 @@ class _ProfilePageState extends State<ProfilePage> {
         SnackBar(content: Text('Error: $e')),
       );
       return false;
+    }
+  }
+
+  /// Delete user profile via the backend API
+  Future<void> _deleteUserProfile() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No user logged in')),
+        );
+        return;
+      }
+
+      final idToken = await user.getIdToken();
+
+      final uri = Uri.parse('$BASE_URL/api/auth/delete-userProfile');
+      final response = await http.delete(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $idToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // Sign out user
+        await FirebaseAuth.instance.signOut();
+
+        // Navigate to login screen
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/', // Navigate to home/root
+            (route) => false,
+          );
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account deleted successfully'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        final errorData = json.decode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Failed to delete account: ${errorData['error'] ?? 'Unknown error'}'),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     }
   }
 
@@ -486,7 +545,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   builder: (context) => AlertDialog(
                     title: const Text("Delete Profile?"),
                     content: const Text(
-                      "This action cannot be undone. Are you sure you want to delete your profile?",
+                      "This action cannot be undone. All your data and workouts will be permanently deleted. Are you sure you want to delete your profile?",
                     ),
                     actions: [
                       TextButton(
@@ -494,13 +553,9 @@ class _ProfilePageState extends State<ProfilePage> {
                         child: const Text("Cancel"),
                       ),
                       TextButton(
-                        onPressed: () {
+                        onPressed: () async {
                           Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Profile deleted (placeholder)."),
-                            ),
-                          );
+                          await _deleteUserProfile();
                         },
                         child: const Text(
                           "Delete",
@@ -659,20 +714,20 @@ class _ProfilePageState extends State<ProfilePage> {
                                 setModalState(() {
                                   _isSaving = true;
                                 });
-                                
+
                                 // Attempt to update user info
                                 final success = await _updateUserInfo();
-                                
+
                                 setState(() {
                                   _isSaving = false;
                                 });
-                                
+
                                 if (success) {
                                   Navigator.pop(context);
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                        content:
-                                            Text("Profile updated successfully.")),
+                                        content: Text(
+                                            "Profile updated successfully.")),
                                   );
                                 } else {
                                   setModalState(() {
@@ -685,8 +740,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                 height: 16,
                                 width: 16,
                                 child: CircularProgressIndicator(
-                                  valueColor:
-                                      AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
                                   strokeWidth: 2,
                                 ),
                               )

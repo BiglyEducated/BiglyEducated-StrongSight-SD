@@ -408,3 +408,46 @@ export const addWorkout = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+/**
+ * DELETE USER PROFILE
+ * Deletes the user account from Firebase Auth and removes their Firestore data
+ * Requires Authorization: Bearer <token>
+ */
+export const deleteUserProfile = async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing or invalid token" });
+    }
+
+    const idToken = authHeader.split("Bearer ")[1];
+    const decodedToken = await getAuth().verifyIdToken(idToken);
+    const uid = decodedToken.uid;
+
+    // Delete user from Firebase Authentication
+    await getAuth().deleteUser(uid);
+
+    // Delete user document from Firestore
+    await db.collection("users").doc(uid).delete();
+
+    // Delete all workouts for this user
+    const workoutsSnapshot = await db
+      .collection("workouts_completed")
+      .where("uid", "==", uid)
+      .get();
+
+    const batch = db.batch();
+    workoutsSnapshot.docs.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+    await batch.commit();
+
+    return res.status(200).json({
+      message: "User profile and all associated data deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting user profile:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
