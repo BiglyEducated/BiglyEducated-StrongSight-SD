@@ -38,7 +38,8 @@ class _MainPageState extends State<MainPage> {
 
     final bgColor = isDark ? const Color(0xFF12110F) : const Color(0xFFFCF5E3);
     final navColor = isDark ? const Color(0xFF1A1917) : const Color(0xFF094941);
-    final selectedColor = isDark ? const Color(0xFFF3EBD3) : const Color(0xFFFCF5E3);
+    final selectedColor =
+        isDark ? const Color(0xFFF3EBD3) : const Color(0xFFFCF5E3);
     final unselectedColor =
         isDark ? const Color(0xFFD9CBB8) : Colors.white.withOpacity(0.7);
 

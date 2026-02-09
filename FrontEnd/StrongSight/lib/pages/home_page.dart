@@ -83,152 +83,11 @@ class _HomePageState extends State<HomePage>
   int _streakDays = 0;
   int? _expandedWorkoutIndex;
 
-  // --------------------- Today's Workout --------------------------------------------
-  Workout? todaysWorkout = Workout(
-    //////////API FOR TODAYS WORKOUT GOES HERE//////////////////////////////////////////////////////
-    workoutName: "Leetcode Session",
-    date: DateTime.now(),
-    exercises: [
-      WorkoutExercise(
-        name: "Squat",
-        equipment: "Barbell",
-        sets: [
-          WorkoutSet(reps: 8, weight: 135),
-          WorkoutSet(reps: 8, weight: 135),
-          WorkoutSet(reps: 6, weight: 145),
-        ],
-      ),
-      WorkoutExercise(
-        name: "Bench Press",
-        equipment: "Barbell",
-        sets: [
-          WorkoutSet(reps: 10, weight: 95),
-        ],
-      ),
-      WorkoutExercise(
-        name: "Bicep Curls",
-        equipment: "Dumbbell",
-        sets: [
-          WorkoutSet(reps: 12, weight: 25),
-          WorkoutSet(reps: 12, weight: 25),
-        ],
-      ),
-    ],
-  );
-
-// --------------------- Recent Workouts ---------------------------------------------
-  final List<Workout> recentWorkouts = [
-    Workout(
-      workoutName: "Push Day",
-      date: DateTime.now().subtract(const Duration(days: 1)),
-      exercises: [
-        WorkoutExercise(
-          name: "Bench Press",
-          equipment: "Barbell",
-          sets: [
-            WorkoutSet(reps: 8, weight: 135),
-            WorkoutSet(reps: 8, weight: 135),
-            WorkoutSet(reps: 8, weight: 135),
-            WorkoutSet(reps: 8, weight: 135),
-          ],
-        ),
-        WorkoutExercise(
-          name: "Incline Dumbbell Press",
-          equipment: "Dumbbell",
-          sets: [
-            WorkoutSet(reps: 10, weight: 50),
-            WorkoutSet(reps: 10, weight: 50),
-            WorkoutSet(reps: 10, weight: 50),
-          ],
-        ),
-      ],
-    ),
-    Workout(
-      workoutName: "Leg Day",
-      date: DateTime.now().subtract(const Duration(days: 1)),
-      exercises: [
-        WorkoutExercise(
-          name: "Back Squat",
-          equipment: "Barbell",
-          sets: [
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-          ],
-        ),
-      ],
-    ),
-    Workout(
-      workoutName: "Chest Day",
-      date: DateTime.now().subtract(const Duration(days: 1)),
-      exercises: [
-        WorkoutExercise(
-          name: "Back Squat",
-          equipment: "Barbell",
-          sets: [
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-          ],
-        ),
-      ],
-    ),
-    Workout(
-      workoutName: "Arm Day",
-      date: DateTime.now().subtract(const Duration(days: 1)),
-      exercises: [
-        WorkoutExercise(
-          name: "Back Squat",
-          equipment: "Barbell",
-          sets: [
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-          ],
-        ),
-      ],
-    ),
-    Workout(
-      workoutName: "Back Day",
-      date: DateTime.now().subtract(const Duration(days: 1)),
-      exercises: [
-        WorkoutExercise(
-          name: "Back Squat",
-          equipment: "Barbell",
-          sets: [
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-          ],
-        ),
-      ],
-    ),
-    Workout(
-      workoutName: "Cardio Day",
-      date: DateTime.now().subtract(const Duration(days: 1)),
-      exercises: [
-        WorkoutExercise(
-          name: "Back Squat",
-          equipment: "Barbell",
-          sets: [
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-            WorkoutSet(reps: 5, weight: 225),
-          ],
-        ),
-      ],
-    ),
-  ];
+  // --------------------- Today's Workout & Recent Workouts (from API) -----------
+  Workout? todaysWorkout;
+  List<Workout> recentWorkouts = [];
+  bool _isLoadingWorkouts = true;
+  Map<String, dynamic> _allWorkoutsData = {}; // Raw data from API
 
   // --------------------- WEEKLY STREAK LOGIC ---------------------------------------------
   DateTime _parseWorkoutDate(String dateString) {
@@ -290,8 +149,10 @@ class _HomePageState extends State<HomePage>
 
     for (final date in weekDates) {
       final formatted = "${_monthNumberToStr(date.month)} ${date.day}";
-      final hasWorkout = recentWorkouts.isNotEmpty;
-      if (hasWorkout) count++;
+      // Check if there's a workout for this date in our data
+      if (_allWorkoutsData.containsKey(formatted)) {
+        count++;
+      }
     }
 
     return count;
@@ -308,11 +169,9 @@ class _HomePageState extends State<HomePage>
     _fadeAnimation =
         CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut);
 
-    //Calculate weekly streak
-    _streakDays = _calculateWeeklyStreak();
-
-    // Fetch user info from API
+    // Fetch user info and workouts from API
     _fetchUserInfo();
+    _fetchUserWorkouts();
   }
 
   @override
@@ -1014,6 +873,106 @@ class _HomePageState extends State<HomePage>
       print('Error fetching user info: $e');
       setState(() {
         _isLoadingUserInfo = false;
+      });
+    }
+  }
+
+  Future<void> _fetchUserWorkouts() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        setState(() {
+          _isLoadingWorkouts = false;
+        });
+        return;
+      }
+
+      final idToken = await user.getIdToken();
+      const String baseUrl = 'http://localhost:5001';
+      final uri = Uri.parse('$baseUrl/api/auth/get-userWorkouts');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $idToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = convert.json.decode(response.body);
+        final data = responseData['data'] as Map<String, dynamic>;
+
+        // Parse the workouts and organize them
+        List<Workout> workouts = [];
+        data.forEach((dateKey, workoutData) {
+          List<WorkoutExercise> exercises = [];
+
+          if (workoutData['exercises'] != null) {
+            for (var ex in workoutData['exercises']) {
+              List<WorkoutSet> sets = [];
+              if (ex['sets'] != null) {
+                for (var set in ex['sets']) {
+                  sets.add(WorkoutSet(
+                    reps: set['reps'] ?? 0,
+                    weight: set['weight'] ?? 0,
+                  ));
+                }
+              }
+              exercises.add(WorkoutExercise(
+                name: ex['name'] ?? 'Unknown',
+                equipment: ex['equipment']?['name'] ?? 'Unknown',
+                sets: sets,
+              ));
+            }
+          }
+
+          workouts.add(Workout(
+            workoutName: workoutData['workoutName'] ?? 'Unnamed Workout',
+            date: DateTime.parse(
+                workoutData['date'] ?? DateTime.now().toString()),
+            exercises: exercises,
+          ));
+        });
+
+        // Sort by date (most recent first)
+        workouts.sort((a, b) => b.date.compareTo(a.date));
+
+        setState(() {
+          _allWorkoutsData = data;
+
+          // Set today's workout (first one with today's date)
+          final now = DateTime.now();
+          todaysWorkout = workouts.firstWhere(
+            (w) =>
+                w.date.year == now.year &&
+                w.date.month == now.month &&
+                w.date.day == now.day,
+            orElse: () => Workout(workoutName: '', date: now, exercises: []),
+          );
+
+          // If no workout found for today, set to null
+          if (todaysWorkout!.exercises.isEmpty) {
+            todaysWorkout = null;
+          }
+
+          recentWorkouts = workouts;
+          _isLoadingWorkouts = false;
+        });
+
+        // Recalculate streak after getting workouts
+        _streakDays = _calculateWeeklyStreak();
+      } else {
+        setState(() {
+          _isLoadingWorkouts = false;
+          todaysWorkout = null;
+          recentWorkouts = [];
+        });
+      }
+    } catch (e) {
+      print('Error fetching workouts: $e');
+      setState(() {
+        _isLoadingWorkouts = false;
       });
     }
   }
