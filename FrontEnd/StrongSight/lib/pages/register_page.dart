@@ -42,7 +42,7 @@ class _RegisterPageState extends State<RegisterPage> {
   String? _selectedGender;
   bool _isLoading = false;
 
-  static const String BASE_URL = 'http://localhost:5000';
+  static const String BASE_URL = 'http://localhost:5001';
 
   /// Create user in Firebase Auth, then store additional fields in backend
   Future<void> _handleRegister() async {

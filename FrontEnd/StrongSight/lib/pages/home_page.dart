@@ -1,16 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert' as convert;
 import '../providers/theme_provider.dart';
-
 
 String _formatWorkoutDate(DateTime date) {
   const months = [
-    "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    "",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"
   ];
   return "${months[date.month]} ${date.day}";
 }
-
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,7 +30,6 @@ class HomePage extends StatefulWidget {
   @override
   State<HomePage> createState() => _HomePageState();
 }
-
 
 //Workout data models
 class Workout {
@@ -55,10 +66,10 @@ class WorkoutSet {
   });
 }
 
-
 class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
-  final String userName = "Yoendry";
+  String userName = "User"; // Default value while loading
+  bool _isLoadingUserInfo = true;
   final String profileImagePath = "assets/images/profile_placeholder.png";
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -69,43 +80,41 @@ class _HomePageState extends State<HomePage>
   late Color workoutTitleColor;
   late Color exerciseNameColor;
 
-
   int _streakDays = 0;
   int? _expandedWorkoutIndex;
-  
 
   // --------------------- Today's Workout --------------------------------------------
-  Workout? todaysWorkout =Workout(                                                                             //////////API FOR TODAYS WORKOUT GOES HERE//////////////////////////////////////////////////////
-  workoutName: "Leetcode Session",
-  date: DateTime.now(),
-  exercises: [
-    WorkoutExercise(
-      name: "Squat",
-      equipment: "Barbell",
-      sets: [
-        WorkoutSet(reps: 8, weight: 135),
-        WorkoutSet(reps: 8, weight: 135),
-        WorkoutSet(reps: 6, weight: 145),
-      ],
-    ),
-    WorkoutExercise(
-      name: "Bench Press",
-      equipment: "Barbell",
-      sets: [
-        WorkoutSet(reps: 10, weight: 95),
-      ],
-    ),
-    WorkoutExercise(
-      name: "Bicep Curls",
-      equipment: "Dumbbell",
-      sets: [
-        WorkoutSet(reps: 12, weight: 25),
-        WorkoutSet(reps: 12, weight: 25),
-      ],
-    ),
-  ],
-);
-
+  Workout? todaysWorkout = Workout(
+    //////////API FOR TODAYS WORKOUT GOES HERE//////////////////////////////////////////////////////
+    workoutName: "Leetcode Session",
+    date: DateTime.now(),
+    exercises: [
+      WorkoutExercise(
+        name: "Squat",
+        equipment: "Barbell",
+        sets: [
+          WorkoutSet(reps: 8, weight: 135),
+          WorkoutSet(reps: 8, weight: 135),
+          WorkoutSet(reps: 6, weight: 145),
+        ],
+      ),
+      WorkoutExercise(
+        name: "Bench Press",
+        equipment: "Barbell",
+        sets: [
+          WorkoutSet(reps: 10, weight: 95),
+        ],
+      ),
+      WorkoutExercise(
+        name: "Bicep Curls",
+        equipment: "Dumbbell",
+        sets: [
+          WorkoutSet(reps: 12, weight: 25),
+          WorkoutSet(reps: 12, weight: 25),
+        ],
+      ),
+    ],
+  );
 
 // --------------------- Recent Workouts ---------------------------------------------
   final List<Workout> recentWorkouts = [
@@ -134,7 +143,6 @@ class _HomePageState extends State<HomePage>
         ),
       ],
     ),
-
     Workout(
       workoutName: "Leg Day",
       date: DateTime.now().subtract(const Duration(days: 1)),
@@ -222,7 +230,6 @@ class _HomePageState extends State<HomePage>
     ),
   ];
 
-
   // --------------------- WEEKLY STREAK LOGIC ---------------------------------------------
   DateTime _parseWorkoutDate(String dateString) {
     final parts = dateString.split(" ");
@@ -303,6 +310,9 @@ class _HomePageState extends State<HomePage>
 
     //Calculate weekly streak
     _streakDays = _calculateWeeklyStreak();
+
+    // Fetch user info from API
+    _fetchUserInfo();
   }
 
   @override
@@ -327,12 +337,11 @@ class _HomePageState extends State<HomePage>
     final cardColor = isDark ? const Color(0xFF1A1917) : Colors.white;
     final primaryTextColor = isDark ? darkModeGreen : lightModeGreen;
     workoutTitleColor =
-    isDark ? const Color.fromARGB(255, 197, 183, 142) : lightModeGreen;
+        isDark ? const Color.fromARGB(255, 197, 183, 142) : lightModeGreen;
     exerciseNameColor =
-    isDark ? const Color.fromARGB(255, 198, 184, 143) : lightModeGreen;
+        isDark ? const Color.fromARGB(255, 198, 184, 143) : lightModeGreen;
 
-    final subTextColor =
-        isDark ? const Color(0xFFD9CBB8) : Colors.grey[700]!;
+    final subTextColor = isDark ? const Color(0xFFD9CBB8) : Colors.grey[700]!;
     final accentColor = isDark ? darkModeGreen : lightModeGreen;
 
     return Scaffold(
@@ -360,7 +369,8 @@ class _HomePageState extends State<HomePage>
                         fontWeight: FontWeight.bold,
                         color: primaryTextColor)),
                 const SizedBox(height: 8),
-                Text("Email: yoendry@example.com", style: TextStyle(color: subTextColor)),
+                Text("Email: yoendry@example.com",
+                    style: TextStyle(color: subTextColor)),
                 Divider(color: subTextColor.withOpacity(0.4)),
                 ListTile(
                   leading: const Icon(Icons.logout, color: Colors.redAccent),
@@ -417,36 +427,24 @@ class _HomePageState extends State<HomePage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _buildStreakCard(
-                          cardColor, primaryTextColor, subTextColor, accentColor),
+                      _buildStreakCard(cardColor, primaryTextColor,
+                          subTextColor, accentColor),
                       const SizedBox(height: 20),
-
-                      _buildSectionTitle(
-                          "Today's Workout", primaryTextColor),
-                      _buildTodaysWorkout(
-                          cardColor, primaryTextColor, subTextColor, accentColor),
-
+                      _buildSectionTitle("Today's Workout", primaryTextColor),
+                      _buildTodaysWorkout(cardColor, primaryTextColor,
+                          subTextColor, accentColor),
                       const SizedBox(height: 20),
-
-                      _buildSectionTitle(
-                          "Recent Workouts", primaryTextColor),
+                      _buildSectionTitle("Recent Workouts", primaryTextColor),
                       _buildExpandableWorkoutList(cardColor, primaryTextColor,
                           subTextColor, accentColor),
-
                       const SizedBox(height: 20),
-
-                      _buildSectionTitle(
-                          "Metrics", primaryTextColor),
-                      _buildMetricsRow(
-                          cardColor, primaryTextColor, subTextColor, accentColor),
-
+                      _buildSectionTitle("Metrics", primaryTextColor),
+                      _buildMetricsRow(cardColor, primaryTextColor,
+                          subTextColor, accentColor),
                       const SizedBox(height: 20),
-
-                      _buildSectionTitle(
-                          "Personal Records", primaryTextColor),
-                      _buildPRTracker(
-                          cardColor, primaryTextColor, subTextColor, accentColor),
-
+                      _buildSectionTitle("Personal Records", primaryTextColor),
+                      _buildPRTracker(cardColor, primaryTextColor, subTextColor,
+                          accentColor),
                       const SizedBox(height: 80),
                     ],
                   ),
@@ -472,15 +470,14 @@ class _HomePageState extends State<HomePage>
 
   Widget _buildSectionTitle(String title, Color textColor) {
     return Text(title,
-        style:
-            TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: textColor));
+        style: TextStyle(
+            fontSize: 20, fontWeight: FontWeight.w700, color: textColor));
   }
 
   // ---------- WEEKLY STREAK CARD ----------
   Widget _buildStreakCard(
       Color cardColor, Color textColor, Color subTextColor, Color accentColor) {
-    final streakBars =
-        List.generate(7, (i) => i < _streakDays ? 1.0 : 0.0);
+    final streakBars = List.generate(7, (i) => i < _streakDays ? 1.0 : 0.0);
 
     return Container(
       decoration: BoxDecoration(
@@ -496,7 +493,8 @@ class _HomePageState extends State<HomePage>
       padding: const EdgeInsets.all(20),
       child: Row(
         children: [
-          Icon(Icons.local_fire_department, color: Color.fromARGB(255, 173, 17, 17), size: 42),
+          Icon(Icons.local_fire_department,
+              color: Color.fromARGB(255, 173, 17, 17), size: 42),
           const SizedBox(width: 16),
           Expanded(
             child:
@@ -519,8 +517,9 @@ class _HomePageState extends State<HomePage>
                       height: (v * 10) + 6,
                       margin: const EdgeInsets.symmetric(horizontal: 1),
                       decoration: BoxDecoration(
-                        color:
-                            v > 0 ? Color(0xFFFF0000) : Color.fromARGB(255, 200, 59, 12),
+                        color: v > 0
+                            ? Color(0xFFFF0000)
+                            : Color.fromARGB(255, 200, 59, 12),
                         borderRadius: BorderRadius.circular(3),
                       ),
                     ),
@@ -535,202 +534,202 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildNoWorkoutCard(
-  Color cardColor,
-  Color subTextColor,
-  Color accentColor,
-) {
-  return Container(
-    decoration: BoxDecoration(
-      color: cardColor,
-      borderRadius: BorderRadius.circular(14),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.05),
-          blurRadius: 6,
-          offset: const Offset(0, 4),
-        ),
-      ],
-    ),
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      children: [
-        Icon(Icons.event_available,
-            color: subTextColor.withOpacity(0.7), size: 36),
-        const SizedBox(height: 10),
-        Text(
-          "No workout scheduled for today",
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: subTextColor,
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
+    Color cardColor,
+    Color subTextColor,
+    Color accentColor,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 4),
           ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.calendar_today, size: 18),
-            label: const Text("Set Workout in Calendar"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: accentColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              elevation: 0,
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Icon(Icons.event_available,
+              color: subTextColor.withOpacity(0.7), size: 36),
+          const SizedBox(height: 10),
+          Text(
+            "No workout scheduled for today",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: subTextColor,
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
             ),
-            onPressed: () {
-              Navigator.pushNamed(context, '/calendar');
-            },
           ),
-        ),
-      ],
-    ),
-  );
-}
-
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.calendar_today, size: 18),
+              label: const Text("Set Workout in Calendar"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accentColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+              onPressed: () {
+                Navigator.pushNamed(context, '/calendar');
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   // ---------- Today's Workout ----------
   Widget _buildTodaysWorkout(
-  Color cardColor,
-  Color textColor,
-  Color subTextColor,
-  Color accentColor,
-) {
-  final bool hasWorkout =
-      todaysWorkout != null && todaysWorkout!.exercises.isNotEmpty;
+    Color cardColor,
+    Color textColor,
+    Color subTextColor,
+    Color accentColor,
+  ) {
+    final bool hasWorkout =
+        todaysWorkout != null && todaysWorkout!.exercises.isNotEmpty;
 
-  return hasWorkout
-      ? GestureDetector(
-          onTap: () => setState(() {
-            _expandedWorkoutIndex =
-                _expandedWorkoutIndex == -1 ? null : -1;
-          }),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            margin: const EdgeInsets.symmetric(vertical: 6),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 6,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ---- Header----
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      todaysWorkout!.workoutName,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: workoutTitleColor,
+    return hasWorkout
+        ? GestureDetector(
+            onTap: () => setState(() {
+              _expandedWorkoutIndex = _expandedWorkoutIndex == -1 ? null : -1;
+            }),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.symmetric(vertical: 6),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 6,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ---- Header----
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        todaysWorkout!.workoutName,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: workoutTitleColor,
+                        ),
+                      ),
+                      Icon(
+                        _expandedWorkoutIndex == -1
+                            ? Icons.expand_less
+                            : Icons.expand_more,
+                        color: subTextColor,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  // ---- Expandable Per-Set Details ----
+                  AnimatedCrossFade(
+                    firstChild: const SizedBox.shrink(),
+                    secondChild: Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Column(
+                        children: todaysWorkout!.exercises.map((exercise) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Exercise Name
+                                Text(
+                                  exercise.name,
+                                  style: TextStyle(
+                                    color: exerciseNameColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  exercise.equipment,
+                                  style: TextStyle(
+                                    color: subTextColor,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+
+                                // Individual Sets
+                                ...List.generate(exercise.sets.length, (i) {
+                                  final set = exercise.sets[i];
+
+                                  return Padding(
+                                    padding: const EdgeInsets.only(
+                                        left: 12, top: 2, bottom: 2),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          "Set ${i + 1}",
+                                          style: TextStyle(
+                                            color: subTextColor,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        Text(
+                                          "${set.reps} @ ${set.weight}",
+                                          style: TextStyle(
+                                            color: accentColor,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                              ],
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ),
-                    Icon(
-                      _expandedWorkoutIndex == -1
-                          ? Icons.expand_less
-                          : Icons.expand_more,
-                      color: subTextColor,
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 4),
-
-                // ---- Expandable Per-Set Details ----
-                AnimatedCrossFade(
-                  firstChild: const SizedBox.shrink(),
-                  secondChild: Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Column(
-                      children: todaysWorkout!.exercises.map((exercise) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Exercise Name
-                              Text(
-                                exercise.name,
-                                style: TextStyle(
-                                  color: exerciseNameColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              Text(
-                                exercise.equipment,
-                                style: TextStyle(
-                                  color: subTextColor,
-                                  fontSize: 12,
-                                ),),
-                              const SizedBox(height: 4),
-
-                              // Individual Sets
-                              ...List.generate(exercise.sets.length, (i) {
-                                final set = exercise.sets[i];
-
-                                return Padding(
-                                  padding: const EdgeInsets.only(
-                                      left: 12, top: 2, bottom: 2),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        "Set ${i + 1}",
-                                        style: TextStyle(
-                                          color: subTextColor,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                      Text(
-                                        "${set.reps} @ ${set.weight}",
-                                        style: TextStyle(
-                                          color: accentColor,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
+                    crossFadeState: _expandedWorkoutIndex == -1
+                        ? CrossFadeState.showSecond
+                        : CrossFadeState.showFirst,
+                    duration: const Duration(milliseconds: 200),
                   ),
-                  crossFadeState: _expandedWorkoutIndex == -1
-                      ? CrossFadeState.showSecond
-                      : CrossFadeState.showFirst,
-                  duration: const Duration(milliseconds: 200),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        )
-      : _buildNoWorkoutCard(cardColor, subTextColor, accentColor);
-}
-
-
+          )
+        : _buildNoWorkoutCard(cardColor, subTextColor, accentColor);
+  }
 
   // ---------- Expandable Recent Workouts ----------
   Widget _buildExpandableWorkoutList(
-      Color cardColor, Color textColor, Color subTextColor, Color accentColor,) {
-    
+    Color cardColor,
+    Color textColor,
+    Color subTextColor,
+    Color accentColor,
+  ) {
     //Takes the 6 most recent workouts
     final recent = recentWorkouts.take(6).toList();
 
@@ -756,113 +755,113 @@ class _HomePageState extends State<HomePage>
                     offset: const Offset(0, 4))
               ],
             ),
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Text(workout.workoutName,
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: exerciseNameColor)),
+                  Icon(isExpanded ? Icons.expand_less : Icons.expand_more,
+                      color: subTextColor)
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(_formatWorkoutDate(workout.date),
+                      style: TextStyle(color: subTextColor, fontSize: 14)),
+                ],
+              ),
+              AnimatedCrossFade(
+                firstChild: const SizedBox.shrink(),
+                secondChild: Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Column(
                     children: [
-                      Text(workout.workoutName,
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: exerciseNameColor)),
-                      Icon(isExpanded ? Icons.expand_less : Icons.expand_more,
-                          color: subTextColor)
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(_formatWorkoutDate(workout.date),
-                          style: TextStyle(color: subTextColor, fontSize: 14)),
-                    ],
-                  ),
-                  AnimatedCrossFade(
-                    firstChild: const SizedBox.shrink(),
-                    secondChild: Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Column(
-                        children: [
-                          Column(
-                            children: workout.exercises.map((exercise) {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 6),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      exercise.name,
-                                      style: TextStyle(
-                                        color: exerciseNameColor,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    Text(
-                                      exercise.equipment,
-                                      style: TextStyle(
-                                        color: subTextColor,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-
-                                    ...List.generate(exercise.sets.length, (i) {
-                                      final set = exercise.sets[i];
-                                      return Padding(
-                                        padding: const EdgeInsets.only(left: 12, top: 2),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              "Set ${i + 1}",
-                                              style: TextStyle(
-                                                color: subTextColor,
-                                                fontSize: 13,
-                                              ),
-                                            ),
-                                            Text(
-                                              "${set.reps} @ ${set.weight}",
-                                              style: TextStyle(
-                                                color: accentColor,
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    }),
-                                  ],
+                      Column(
+                        children: workout.exercises.map((exercise) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  exercise.name,
+                                  style: TextStyle(
+                                    color: exerciseNameColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                              );
-                            }).toList(),)
-                        ],
-                      ),
-                    ),
-                    crossFadeState: isExpanded
-                        ? CrossFadeState.showSecond
-                        : CrossFadeState.showFirst,
-                    duration: const Duration(milliseconds: 200),
+                                Text(
+                                  exercise.equipment,
+                                  style: TextStyle(
+                                    color: subTextColor,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                ...List.generate(exercise.sets.length, (i) {
+                                  final set = exercise.sets[i];
+                                  return Padding(
+                                    padding:
+                                        const EdgeInsets.only(left: 12, top: 2),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          "Set ${i + 1}",
+                                          style: TextStyle(
+                                            color: subTextColor,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        Text(
+                                          "${set.reps} @ ${set.weight}",
+                                          style: TextStyle(
+                                            color: accentColor,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      )
+                    ],
                   ),
-                ]),
+                ),
+                crossFadeState: isExpanded
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+                duration: const Duration(milliseconds: 200),
+              ),
+            ]),
           ),
         );
       }),
     );
   }
 
-
   // ---------- Metrics ----------
-  Widget _buildMetricsRow(Color cardColor, Color textColor,
-      Color subTextColor, Color accentColor) {
+  Widget _buildMetricsRow(
+      Color cardColor, Color textColor, Color subTextColor, Color accentColor) {
     final metrics = [
-      //Track the amount of days worked for x amount of months 
+      //Track the amount of days worked for x amount of months
       {"title": "Workout Frequency", "value": "87%"},
-      //Take the average of the users workout lenghts for a week at a time 
+      //Take the average of the users workout lenghts for a week at a time
       {"title": "Duration", "value": "Average: 1hr 30min"},
-      //Maybe prompt the user for their weigth once a week and display the difference 
+      //Maybe prompt the user for their weigth once a week and display the difference
       {"title": "Weight", "value": "+5lbs"},
     ];
 
@@ -903,8 +902,12 @@ class _HomePageState extends State<HomePage>
   }
 
   // ---------- PR TRACKER ----------
-  Widget _buildPRTracker(Color cardColor, Color textColor, Color accentColor,
-      Color subTextColor,) {
+  Widget _buildPRTracker(
+    Color cardColor,
+    Color textColor,
+    Color accentColor,
+    Color subTextColor,
+  ) {
     final prs = [
       {"lift": "Bench Press", "weight": "205 lbs", "date": "October 26, 2025"},
       {"lift": "Squat", "weight": "275 lbs", "date": "September 1, 2025"},
@@ -970,5 +973,48 @@ class _HomePageState extends State<HomePage>
         _fadeController.reverse();
       }
     });
+  }
+
+  Future<void> _fetchUserInfo() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        setState(() {
+          _isLoadingUserInfo = false;
+        });
+        return;
+      }
+
+      final idToken = await user.getIdToken();
+      const String baseUrl = 'http://localhost:5001';
+      final uri = Uri.parse('$baseUrl/api/auth/get-userInfo');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $idToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = convert.json.decode(response.body);
+        final data = responseData['data'];
+
+        setState(() {
+          userName = data['displayName'] ?? 'Yoendry';
+          _isLoadingUserInfo = false;
+        });
+      } else {
+        setState(() {
+          _isLoadingUserInfo = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching user info: $e');
+      setState(() {
+        _isLoadingUserInfo = false;
+      });
+    }
   }
 }

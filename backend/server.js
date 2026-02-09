@@ -7,7 +7,7 @@ import { db } from "./config/firebase.js";
 
 const serviceAccount = JSON.parse(readFileSync("./serviceAccountKey.json", "utf8"));
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Enable CORS for all origins (development)
 app.use(cors());
