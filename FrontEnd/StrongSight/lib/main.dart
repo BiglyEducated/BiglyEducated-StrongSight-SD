@@ -15,6 +15,7 @@ import 'pages/main_page.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:ui' as ui;
 
+
 Future<void> verifyAssets() async {
   final assets = [
     'assets/images/logo.png',
@@ -37,9 +38,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // ✅ Initialize Firebase before running the app
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp();
+
 
   await verifyAssets();
 
