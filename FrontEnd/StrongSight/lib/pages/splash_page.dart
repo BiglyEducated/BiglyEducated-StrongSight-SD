@@ -34,6 +34,13 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _controller.forward();
+
+    // Fallback in case Lottie fails to load
+    Future.delayed(const Duration(seconds: 4), () {
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/');
+      }
+    });
   }
 
   @override
