@@ -40,17 +40,9 @@ class PoseAnalysisResult {
     String exerciseName = '',
     bool hasFormError = false,
     String? formErrorMessage,
-    String? exerciseName,
   }) {
-<<<<<<< HEAD
-    String phase = _getPhaseString(state, exerciseName);
-=======
-    // Determine phase string from state
-    String phase = _getPhaseString(state, exerciseName);
-
-    // Use form error message if present, otherwise use rep counter feedback
->>>>>>> d0b8cfa (postworkout screen)
-    String feedback = hasFormError && formErrorMessage != null
+    final String phase = _getPhaseString(state, exerciseName);
+    final String feedback = hasFormError && formErrorMessage != null
         ? formErrorMessage
         : feedbackMessage;
 
@@ -66,7 +58,6 @@ class PoseAnalysisResult {
     );
   }
 
-<<<<<<< HEAD
   static String _getPhaseString(ExerciseState state, String? exerciseName) {
     final isBench = exerciseName?.toLowerCase().contains('bench') ?? false;
     final isSquat = exerciseName?.toLowerCase().contains('squat') ?? false;
@@ -82,7 +73,7 @@ class PoseAnalysisResult {
         if (isOverhead) return 'overhead lockout';
         if (isDeadlift) return 'standing upright';
         return 'ready';
-        
+
       case ExerciseState.descent:
         if (isBench) return 'lowering bar';
         if (isSquat) return 'descending';
@@ -90,7 +81,7 @@ class PoseAnalysisResult {
         if (isOverhead) return 'lowering';
         if (isDeadlift) return 'lowering bar';
         return 'lowering';
-        
+
       case ExerciseState.bottom:
         if (isBench) return 'bar at chest';
         if (isSquat) return 'parallel';
@@ -98,7 +89,7 @@ class PoseAnalysisResult {
         if (isOverhead) return 'bar at shoulders';
         if (isDeadlift) return 'bar at floor';
         return 'bottom';
-        
+
       case ExerciseState.ascending:
         if (isBench) return 'pressing up';
         if (isSquat) return 'ascending';
@@ -106,21 +97,6 @@ class PoseAnalysisResult {
         if (isOverhead) return 'pressing overhead';
         if (isDeadlift) return 'lifting';
         return 'rising';
-=======
-  static String _getPhaseString(ExerciseState state, String exerciseName) {
-    final normalized = exerciseName.toLowerCase();
-    final isBench = normalized.contains('bench');
-
-    switch (state) {
-      case ExerciseState.standing:
-        return isBench ? 'lockout' : 'standing';
-      case ExerciseState.descent:
-        return isBench ? 'lowering' : 'descending';
-      case ExerciseState.bottom:
-        return isBench ? 'chest touch' : 'parallel';
-      case ExerciseState.ascending:
-        return isBench ? 'pressing' : 'ascending';
->>>>>>> d0b8cfa (postworkout screen)
     }
   }
 

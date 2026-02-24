@@ -8,46 +8,52 @@ class FormChecker {
   static const int _kneeCaveThresholdFrames = 3;
   static const double _kneeCaveRatio = 0.75;
 
-  // Baseline knee/ankle ratio captured at start of descent
   double? _baselineKneeAnkleRatio;
   ExerciseState _previousState = ExerciseState.standing;
-  
+
   int _asymmetryFrameCount = 0;
   static const int _asymmetryThresholdFrames = 5;
   static const double _asymmetryAngleDiff = 20.0;
-  
+
   int _forwardLeanFrameCount = 0;
   static const int _forwardLeanThresholdFrames = 3;
   static const double _forwardLeanRatio = 0.75;
-  
+
   // Bench press checks
   int _elbowFlareFrameCount = 0;
   static const int _elbowFlareThresholdFrames = 3;
-  static const double _elbowFlareMaxAngle = 80.0;
-  
-  int _benchAsymmetryFrameCount = 0;
-  static const int _benchAsymmetryThresholdFrames = 3;
-  static const double _benchAsymmetryAngleDiff = 15.0;
-  
+  static const double _elbowFlareRatio = 1.35;
+
+  int _wristStackFrameCount = 0;
+  static const int _wristStackThresholdFrames = 3;
+  static const double _wristStackTolerance = 0.25;
+
+  int _barTiltFrameCount = 0;
+  static const int _barTiltThresholdFrames = 3;
+  static const double _barTiltRatio = 0.15;
+
   // Deadlift checks
   int _backRoundingFrameCount = 0;
   static const int _backRoundingThresholdFrames = 4;
   static const double _backRoundingAngleMin = 160.0;
-  
+
   int _deadliftAsymmetryFrameCount = 0;
   static const int _deadliftAsymmetryThresholdFrames = 4;
   static const double _deadliftAsymmetryAngleDiff = 15.0;
-  
+
   // Error persistence
   String? _lastErrorMessage;
   FormErrorType? _lastErrorType;
   int _errorDisplayFrames = 0;
   static const int _errorPersistFrames = 15;
-  
-  // Per-joint confidence thresholds - joints that are harder to detect get lower thresholds
-  static const double _confidenceHigh = 0.75;  // hips, shoulders (large, stable joints)
-  static const double _confidenceMed  = 0.65;  // knees, elbows
-  static const double _confidenceLow  = 0.55;  // ankles, wrists (small, often occluded)
+
+  // Per-joint confidence thresholds
+  static const double _confidenceHigh = 0.75;
+  static const double _confidenceMed = 0.65;
+  static const double _confidenceLow = 0.55;
+
+  // Shared minimum confidence used for bench wrist/elbow checks
+  static const double _minConfidence = _confidenceLow;
 
   void reset() {
     _kneeCaveFrameCount = 0;
@@ -56,7 +62,8 @@ class FormChecker {
     _asymmetryFrameCount = 0;
     _forwardLeanFrameCount = 0;
     _elbowFlareFrameCount = 0;
-    _benchAsymmetryFrameCount = 0;
+    _wristStackFrameCount = 0;
+    _barTiltFrameCount = 0;
     _backRoundingFrameCount = 0;
     _deadliftAsymmetryFrameCount = 0;
     _lastErrorMessage = null;
@@ -79,7 +86,6 @@ class FormChecker {
       return FormCheckResult(hasError: false);
     }
 
-    // Knee cave can happen on the way down, at the bottom, AND on the way back up
     bool isRelevantPhase = currentState == ExerciseState.descent ||
                            currentState == ExerciseState.bottom ||
                            currentState == ExerciseState.ascending;
@@ -98,15 +104,13 @@ class FormChecker {
 
     double ratio = kneeDist / ankleDist;
 
-    // Capture baseline at the moment descent begins
     if (_previousState == ExerciseState.standing && currentState == ExerciseState.descent) {
       _baselineKneeAnkleRatio = ratio;
     }
     _previousState = currentState;
 
-    // Use baseline-relative threshold if we have one, otherwise fall back to fixed ratio
     final threshold = _baselineKneeAnkleRatio != null
-        ? _baselineKneeAnkleRatio! * 0.85  // flag if knees cave 15% inward from their own starting position
+        ? _baselineKneeAnkleRatio! * 0.85
         : _kneeCaveRatio;
 
     if (ratio < threshold) {
@@ -137,16 +141,6 @@ class FormChecker {
     if (leftShoulder == null || rightShoulder == null || leftHip == null || rightHip == null ||
         leftKnee == null || rightKnee == null ||
         leftShoulder.likelihood < _confidenceHigh || leftHip.likelihood < _confidenceHigh) {
-      _forwardLeanFrameCount = 0;
-      return FormCheckResult(hasError: false);
-    }
-
-    // Forward lean is relevant throughout the entire rep including lockout
-    bool isRelevantPhase = currentState == ExerciseState.descent ||
-                           currentState == ExerciseState.bottom ||
-                           currentState == ExerciseState.ascending ||
-                           currentState == ExerciseState.standing;
-    if (!isRelevantPhase) {
       _forwardLeanFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
@@ -197,7 +191,6 @@ class FormChecker {
       return FormCheckResult(hasError: false);
     }
 
-    // Asymmetry is relevant throughout the entire rep
     bool isRelevantPhase = currentState == ExerciseState.descent ||
                            currentState == ExerciseState.bottom ||
                            currentState == ExerciseState.ascending;
@@ -228,100 +221,156 @@ class FormChecker {
 
   // BENCH PRESS CHECKS
 
+  /// Check for excessive elbow flare using elbow-width vs shoulder-width ratio.
   FormCheckResult checkElbowFlare(Pose pose, ExerciseState currentState) {
     final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
     final leftElbow = pose.landmarks[PoseLandmarkType.leftElbow];
-    final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
+    final rightElbow = pose.landmarks[PoseLandmarkType.rightElbow];
 
-    if (leftShoulder == null || leftElbow == null || leftHip == null ||
-        leftShoulder.likelihood < _confidenceHigh || leftElbow.likelihood < _confidenceMed ||
-        leftHip.likelihood < _confidenceHigh) {
+    if (leftShoulder == null || rightShoulder == null ||
+        leftElbow == null || rightElbow == null ||
+        leftElbow.likelihood < _minConfidence ||
+        rightElbow.likelihood < _minConfidence) {
       _elbowFlareFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
 
-    bool isRelevantPhase = currentState == ExerciseState.descent || currentState == ExerciseState.bottom;
+    final isRelevantPhase = currentState == ExerciseState.descent ||
+        currentState == ExerciseState.bottom;
     if (!isRelevantPhase) {
       _elbowFlareFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
 
-    double elbowAngle = _calculateElbowFlareAngle(leftShoulder, leftElbow, leftHip);
+    final shoulderWidth =
+        AngleCalculator.calculateHorizontalDistance(leftShoulder, rightShoulder);
+    final elbowWidth =
+        AngleCalculator.calculateHorizontalDistance(leftElbow, rightElbow);
 
-    if (elbowAngle > _elbowFlareMaxAngle) {
+    if (shoulderWidth <= 0) {
+      _elbowFlareFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    final ratio = elbowWidth / shoulderWidth;
+    if (ratio > _elbowFlareRatio) {
       _elbowFlareFrameCount++;
-      if (_elbowFlareFrameCount >= _elbowFlareThresholdFrames) {
-        return FormCheckResult(
-          hasError: true,
-          errorMessage: "⚠️ ELBOW FLARE - Tuck elbows in!",
-          errorType: FormErrorType.elbowFlare,
-          severity: FormErrorSeverity.warning,
-        );
-      }
     } else {
       _elbowFlareFrameCount = 0;
+    }
+
+    if (_elbowFlareFrameCount >= _elbowFlareThresholdFrames) {
+      return FormCheckResult(
+        hasError: true,
+        errorMessage: "⚠️ ELBOW FLARE - Tuck elbows slightly!",
+        errorType: FormErrorType.elbowFlare,
+        severity: FormErrorSeverity.warning,
+      );
     }
     return FormCheckResult(hasError: false);
   }
 
-  FormCheckResult checkBenchSymmetry(Pose pose, ExerciseState currentState) {
+  /// Check wrist-over-elbow stacking during press/descent.
+  FormCheckResult checkWristStack(Pose pose, ExerciseState currentState) {
     final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
-    final leftElbow = pose.landmarks[PoseLandmarkType.leftElbow];
-    final leftWrist = pose.landmarks[PoseLandmarkType.leftWrist];
     final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
+    final leftElbow = pose.landmarks[PoseLandmarkType.leftElbow];
     final rightElbow = pose.landmarks[PoseLandmarkType.rightElbow];
+    final leftWrist = pose.landmarks[PoseLandmarkType.leftWrist];
     final rightWrist = pose.landmarks[PoseLandmarkType.rightWrist];
 
-    if (leftShoulder == null || leftElbow == null || leftWrist == null ||
-        rightShoulder == null || rightElbow == null || rightWrist == null ||
-        leftElbow.likelihood < _confidenceMed || rightElbow.likelihood < _confidenceMed ||
-        leftWrist.likelihood < _confidenceLow || rightWrist.likelihood < _confidenceLow) {
-      _benchAsymmetryFrameCount = 0;
+    if (leftShoulder == null || rightShoulder == null ||
+        leftElbow == null || rightElbow == null ||
+        leftWrist == null || rightWrist == null ||
+        leftWrist.likelihood < _minConfidence ||
+        rightWrist.likelihood < _minConfidence) {
+      _wristStackFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
 
-    bool isRelevantPhase = currentState == ExerciseState.descent || currentState == ExerciseState.bottom;
+    final isRelevantPhase = currentState == ExerciseState.descent ||
+        currentState == ExerciseState.ascending;
     if (!isRelevantPhase) {
-      _benchAsymmetryFrameCount = 0;
+      _wristStackFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
 
-    double leftElbowAngle = AngleCalculator.calculateAngle(leftShoulder, leftElbow, leftWrist);
-    double rightElbowAngle = AngleCalculator.calculateAngle(rightShoulder, rightElbow, rightWrist);
-    double angleDifference = (leftElbowAngle - rightElbowAngle).abs();
+    final shoulderWidth =
+        AngleCalculator.calculateHorizontalDistance(leftShoulder, rightShoulder);
+    if (shoulderWidth <= 0) {
+      _wristStackFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
 
-    if (angleDifference > _benchAsymmetryAngleDiff) {
-      _benchAsymmetryFrameCount++;
-      if (_benchAsymmetryFrameCount >= _benchAsymmetryThresholdFrames) {
-        return FormCheckResult(
-          hasError: true,
-          errorMessage: "⚠️ UNEVEN ARMS - Balance the bar!",
-          errorType: FormErrorType.asymmetry,
-          severity: FormErrorSeverity.warning,
-        );
-      }
+    final leftOffset = (leftWrist.x - leftElbow.x).abs();
+    final rightOffset = (rightWrist.x - rightElbow.x).abs();
+    final avgOffset = (leftOffset + rightOffset) / 2;
+
+    if (avgOffset > shoulderWidth * _wristStackTolerance) {
+      _wristStackFrameCount++;
     } else {
-      _benchAsymmetryFrameCount = 0;
+      _wristStackFrameCount = 0;
+    }
+
+    if (_wristStackFrameCount >= _wristStackThresholdFrames) {
+      return FormCheckResult(
+        hasError: true,
+        errorMessage: "⚠️ WRIST STACK - Keep wrists over elbows!",
+        errorType: FormErrorType.wristStack,
+        severity: FormErrorSeverity.warning,
+      );
     }
     return FormCheckResult(hasError: false);
   }
 
-  double _calculateElbowFlareAngle(PoseLandmark shoulder, PoseLandmark elbow, PoseLandmark hip) {
-    double elbowDx = elbow.x - shoulder.x;
-    double elbowDy = elbow.y - shoulder.y;
-    double torsoDx = hip.x - shoulder.x;
-    double torsoDy = hip.y - shoulder.y;
-    
-    double dotProduct = elbowDx * torsoDx + elbowDy * torsoDy;
-    double elbowMag = AngleCalculator.calculateDistance(shoulder, elbow);
-    double torsoMag = AngleCalculator.calculateDistance(shoulder, hip);
-    
-    if (elbowMag == 0 || torsoMag == 0) return 0;
-    
-    double cosAngle = dotProduct / (elbowMag * torsoMag);
-    cosAngle = cosAngle.clamp(-1.0, 1.0);
-    
-    return (180 / 3.14159) * (1.5708 - (cosAngle).abs().clamp(0, 1));
+  /// Check bar path tilt via wrist height mismatch.
+  FormCheckResult checkBarTilt(Pose pose, ExerciseState currentState) {
+    final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
+    final leftWrist = pose.landmarks[PoseLandmarkType.leftWrist];
+    final rightWrist = pose.landmarks[PoseLandmarkType.rightWrist];
+
+    if (leftShoulder == null || rightShoulder == null ||
+        leftWrist == null || rightWrist == null ||
+        leftWrist.likelihood < _minConfidence ||
+        rightWrist.likelihood < _minConfidence) {
+      _barTiltFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    final isRelevantPhase = currentState == ExerciseState.ascending ||
+        currentState == ExerciseState.bottom;
+    if (!isRelevantPhase) {
+      _barTiltFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    final shoulderWidth =
+        AngleCalculator.calculateHorizontalDistance(leftShoulder, rightShoulder);
+    if (shoulderWidth <= 0) {
+      _barTiltFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    final wristHeightDelta = (leftWrist.y - rightWrist.y).abs();
+    final normalizedTilt = wristHeightDelta / shoulderWidth;
+
+    if (normalizedTilt > _barTiltRatio) {
+      _barTiltFrameCount++;
+    } else {
+      _barTiltFrameCount = 0;
+    }
+
+    if (_barTiltFrameCount >= _barTiltThresholdFrames) {
+      return FormCheckResult(
+        hasError: true,
+        errorMessage: "⚠️ BAR TILT - Press evenly on both sides!",
+        errorType: FormErrorType.barTilt,
+        severity: FormErrorSeverity.warning,
+      );
+    }
+    return FormCheckResult(hasError: false);
   }
 
   // DEADLIFT CHECKS
@@ -338,7 +387,6 @@ class FormChecker {
       return FormCheckResult(hasError: false);
     }
 
-    // Back rounding is dangerous throughout the entire deadlift including lockout
     bool isRelevantPhase = currentState == ExerciseState.descent ||
                            currentState == ExerciseState.bottom ||
                            currentState == ExerciseState.ascending ||
@@ -382,7 +430,7 @@ class FormChecker {
       return FormCheckResult(hasError: false);
     }
 
-    bool isRelevantPhase = currentState == ExerciseState.descent || 
+    bool isRelevantPhase = currentState == ExerciseState.descent ||
                            currentState == ExerciseState.bottom ||
                            currentState == ExerciseState.ascending;
     if (!isRelevantPhase) {
@@ -448,9 +496,10 @@ class FormChecker {
 
   FormCheckResult checkAllBenchForm(Pose pose, ExerciseState currentState) {
     final elbowFlareResult = checkElbowFlare(pose, currentState);
-    final symmetryResult = checkBenchSymmetry(pose, currentState);
+    final wristStackResult = checkWristStack(pose, currentState);
+    final barTiltResult = checkBarTilt(pose, currentState);
 
-    return _persistError(_prioritizeError([elbowFlareResult, symmetryResult]));
+    return _persistError(_prioritizeError([elbowFlareResult, wristStackResult, barTiltResult]));
   }
 
   FormCheckResult checkAllDeadliftForm(Pose pose, ExerciseState currentState) {
@@ -469,211 +518,6 @@ class FormChecker {
 
   FormCheckResult _persistError(FormCheckResult currentError) {
     if (currentError.hasError) {
-      _lastErrorMessage = currentError.errorMessage;
-      _lastErrorType = currentError.errorType;
-      _errorDisplayFrames = _errorPersistFrames;
-      return currentError;
-    } else if (_errorDisplayFrames > 0) {
-      _errorDisplayFrames--;
-      return FormCheckResult(
-        hasError: true,
-        errorMessage: _lastErrorMessage,
-        errorType: _lastErrorType,
-        severity: FormErrorSeverity.warning,
-      );
-    } else {
-      _lastErrorMessage = null;
-      _lastErrorType = null;
-      return FormCheckResult(hasError: false);
-    }
-  }
-
-  /// Check for excessive elbow flare in bench press.
-  /// Compares elbow width against shoulder width during lowering/bottom phases.
-  FormCheckResult checkElbowFlare(
-    Pose pose,
-    ExerciseState currentState,
-  ) {
-    final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
-    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
-    final leftElbow = pose.landmarks[PoseLandmarkType.leftElbow];
-    final rightElbow = pose.landmarks[PoseLandmarkType.rightElbow];
-
-    if (leftShoulder == null || rightShoulder == null ||
-        leftElbow == null || rightElbow == null ||
-        leftElbow.likelihood < _minConfidence ||
-        rightElbow.likelihood < _minConfidence) {
-      _elbowFlareFrameCount = 0;
-      return FormCheckResult(hasError: false);
-    }
-
-    final isRelevantPhase = currentState == ExerciseState.descent ||
-        currentState == ExerciseState.bottom;
-    if (!isRelevantPhase) {
-      _elbowFlareFrameCount = 0;
-      return FormCheckResult(hasError: false);
-    }
-
-    final shoulderWidth =
-        AngleCalculator.calculateHorizontalDistance(leftShoulder, rightShoulder);
-    final elbowWidth =
-        AngleCalculator.calculateHorizontalDistance(leftElbow, rightElbow);
-
-    if (shoulderWidth <= 0) {
-      _elbowFlareFrameCount = 0;
-      return FormCheckResult(hasError: false);
-    }
-
-    final ratio = elbowWidth / shoulderWidth;
-    if (ratio > _elbowFlareRatio) {
-      _elbowFlareFrameCount++;
-    } else {
-      _elbowFlareFrameCount = 0;
-    }
-
-    if (_elbowFlareFrameCount >= _elbowFlareThresholdFrames) {
-      return FormCheckResult(
-        hasError: true,
-        errorMessage: "⚠️ ELBOW FLARE - Tuck elbows slightly!",
-        errorType: FormErrorType.elbowFlare,
-        severity: FormErrorSeverity.warning,
-      );
-    }
-
-    return FormCheckResult(hasError: false);
-  }
-
-  /// Check wrist-over-elbow stacking in bench press.
-  /// Flags when horizontal wrist drift is too large during press or descent.
-  FormCheckResult checkWristStack(
-    Pose pose,
-    ExerciseState currentState,
-  ) {
-    final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
-    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
-    final leftElbow = pose.landmarks[PoseLandmarkType.leftElbow];
-    final rightElbow = pose.landmarks[PoseLandmarkType.rightElbow];
-    final leftWrist = pose.landmarks[PoseLandmarkType.leftWrist];
-    final rightWrist = pose.landmarks[PoseLandmarkType.rightWrist];
-
-    if (leftShoulder == null || rightShoulder == null ||
-        leftElbow == null || rightElbow == null ||
-        leftWrist == null || rightWrist == null ||
-        leftWrist.likelihood < _minConfidence ||
-        rightWrist.likelihood < _minConfidence) {
-      _wristStackFrameCount = 0;
-      return FormCheckResult(hasError: false);
-    }
-
-    final isRelevantPhase = currentState == ExerciseState.descent ||
-        currentState == ExerciseState.ascending;
-    if (!isRelevantPhase) {
-      _wristStackFrameCount = 0;
-      return FormCheckResult(hasError: false);
-    }
-
-    final shoulderWidth =
-        AngleCalculator.calculateHorizontalDistance(leftShoulder, rightShoulder);
-    if (shoulderWidth <= 0) {
-      _wristStackFrameCount = 0;
-      return FormCheckResult(hasError: false);
-    }
-
-    final leftOffset = (leftWrist.x - leftElbow.x).abs();
-    final rightOffset = (rightWrist.x - rightElbow.x).abs();
-    final avgOffset = (leftOffset + rightOffset) / 2;
-
-    if (avgOffset > shoulderWidth * _wristStackTolerance) {
-      _wristStackFrameCount++;
-    } else {
-      _wristStackFrameCount = 0;
-    }
-
-    if (_wristStackFrameCount >= _wristStackThresholdFrames) {
-      return FormCheckResult(
-        hasError: true,
-        errorMessage: "⚠️ WRIST STACK - Keep wrists over elbows!",
-        errorType: FormErrorType.wristStack,
-        severity: FormErrorSeverity.warning,
-      );
-    }
-
-    return FormCheckResult(hasError: false);
-  }
-
-  /// Check bar path tilt proxy by comparing wrist heights.
-  /// Large left/right height mismatch indicates uneven press.
-  FormCheckResult checkBarTilt(
-    Pose pose,
-    ExerciseState currentState,
-  ) {
-    final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
-    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
-    final leftWrist = pose.landmarks[PoseLandmarkType.leftWrist];
-    final rightWrist = pose.landmarks[PoseLandmarkType.rightWrist];
-
-    if (leftShoulder == null || rightShoulder == null ||
-        leftWrist == null || rightWrist == null ||
-        leftWrist.likelihood < _minConfidence ||
-        rightWrist.likelihood < _minConfidence) {
-      _barTiltFrameCount = 0;
-      return FormCheckResult(hasError: false);
-    }
-
-    final isRelevantPhase = currentState == ExerciseState.ascending ||
-        currentState == ExerciseState.bottom;
-    if (!isRelevantPhase) {
-      _barTiltFrameCount = 0;
-      return FormCheckResult(hasError: false);
-    }
-
-    final shoulderWidth =
-        AngleCalculator.calculateHorizontalDistance(leftShoulder, rightShoulder);
-    if (shoulderWidth <= 0) {
-      _barTiltFrameCount = 0;
-      return FormCheckResult(hasError: false);
-    }
-
-    final wristHeightDelta = (leftWrist.y - rightWrist.y).abs();
-    final normalizedTilt = wristHeightDelta / shoulderWidth;
-
-    if (normalizedTilt > _barTiltRatio) {
-      _barTiltFrameCount++;
-    } else {
-      _barTiltFrameCount = 0;
-    }
-
-    if (_barTiltFrameCount >= _barTiltThresholdFrames) {
-      return FormCheckResult(
-        hasError: true,
-        errorMessage: "⚠️ BAR TILT - Press evenly on both sides!",
-        errorType: FormErrorType.barTilt,
-        severity: FormErrorSeverity.warning,
-      );
-    }
-
-    return FormCheckResult(hasError: false);
-  }
-
-  /// Run all bench press form checks and return highest priority error with persistence.
-  FormCheckResult checkAllBenchPressForm(
-    Pose pose,
-    ExerciseState currentState,
-  ) {
-    final elbowFlareResult = checkElbowFlare(pose, currentState);
-    final wristStackResult = checkWristStack(pose, currentState);
-    final barTiltResult = checkBarTilt(pose, currentState);
-
-    FormCheckResult? currentError;
-    if (elbowFlareResult.hasError) {
-      currentError = elbowFlareResult;
-    } else if (wristStackResult.hasError) {
-      currentError = wristStackResult;
-    } else if (barTiltResult.hasError) {
-      currentError = barTiltResult;
-    }
-
-    if (currentError != null && currentError.hasError) {
       _lastErrorMessage = currentError.errorMessage;
       _lastErrorType = currentError.errorType;
       _errorDisplayFrames = _errorPersistFrames;
@@ -716,6 +560,8 @@ enum FormErrorType {
   excessiveSpeed,
   forwardLean,
   elbowFlare,
+  wristStack,
+  barTilt,
   backRounding,
 }
 

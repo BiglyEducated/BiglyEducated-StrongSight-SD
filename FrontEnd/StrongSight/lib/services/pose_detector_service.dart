@@ -12,10 +12,10 @@ class PoseDetectorService {
   RepCounter? _repCounter;
   final FormChecker _formChecker = FormChecker();
   bool _isInitialized = false;
-  String? _currentExercise;
+  String? _currentExerciseKey;
 
   // Smoothing - stores exponential moving average of each landmark position
-  static const double _smoothingFactor = 0.4; // lower = smoother but more lag
+  static const double _smoothingFactor = 0.4;
   final Map<PoseLandmarkType, _SmoothedLandmark> _smoothedLandmarks = {};
 
   bool get isInitialized => _isInitialized;
@@ -44,6 +44,7 @@ class PoseDetectorService {
       _repCounter = RepCounter(config);
       _formChecker.reset();
       _currentExerciseKey = configKey;
+      _smoothedLandmarks.clear();
     }
   }
 
@@ -51,13 +52,11 @@ class PoseDetectorService {
     if (ExerciseLibrary.configs.containsKey(normalizedName)) {
       return normalizedName;
     }
-
     if (normalizedName.contains('bench')) return 'bench';
     if (normalizedName.contains('squat')) return 'squat';
     if (normalizedName.contains('deadlift')) return 'deadlift';
     if (normalizedName.contains('row')) return 'row';
     if (normalizedName.contains('overhead')) return 'overhead';
-
     return normalizedName;
   }
 
@@ -69,19 +68,25 @@ class PoseDetectorService {
     if (!_isInitialized) {
       throw Exception('PoseDetectorService not initialized');
     }
-
     final inputImage = _inputImageFromCameraImage(image, rotation);
     if (inputImage == null) return [];
     return await _poseDetector.processImage(inputImage);
   }
 
+  /// Analyze the currently-selected exercise.
+  PoseAnalysisResult analyzeCurrentExerciseForm(Pose pose) {
+    return _analyzeExerciseForm(pose);
+  }
+
+  // Keep named helpers for any call sites that reference them directly
   PoseAnalysisResult analyzeSquatForm(Pose pose) => _analyzeExerciseForm(pose);
   PoseAnalysisResult analyzeBenchForm(Pose pose) => _analyzeExerciseForm(pose);
 
   PoseAnalysisResult _analyzeExerciseForm(Pose rawPose) {
     final pose = _smoothPose(rawPose);
-    if (_repCounter == null || _currentExercise == null) {
-      print('ERROR: repCounter=${_repCounter == null}, exercise=$_currentExercise');
+
+    if (_repCounter == null || _currentExerciseKey == null) {
+      print('ERROR: repCounter=${_repCounter == null}, exercise=$_currentExerciseKey');
       return PoseAnalysisResult.invalid('No exercise selected');
     }
 
@@ -99,69 +104,16 @@ class PoseDetectorService {
     _repCounter!.update(angle);
 
     FormCheckResult formCheck;
-    if (_currentExercise == 'squat') {
-      formCheck = _formChecker.checkAllSquatForm(pose, _repCounter!.currentState);
-    } else if (_currentExercise == 'bench' || _currentExercise == 'bench press') {
-      formCheck = _formChecker.checkAllBenchForm(pose, _repCounter!.currentState);
-    } else if (_currentExercise == 'row' || _currentExercise == 'barbell row') {
-      formCheck = _formChecker.checkBenchSymmetry(pose, _repCounter!.currentState);
-    } else if (_currentExercise == 'overhead' || _currentExercise == 'overhead press') {
-      formCheck = _formChecker.checkBenchSymmetry(pose, _repCounter!.currentState);
-    } else if (_currentExercise == 'deadlift') {
-      formCheck = _formChecker.checkAllDeadliftForm(pose, _repCounter!.currentState);
-    } else {
-      formCheck = FormCheckResult(hasError: false);
+    switch (_currentExerciseKey) {
+      case 'squat':
+        formCheck = _formChecker.checkAllSquatForm(pose, _repCounter!.currentState);
+      case 'bench':
+        formCheck = _formChecker.checkAllBenchForm(pose, _repCounter!.currentState);
+      case 'deadlift':
+        formCheck = _formChecker.checkAllDeadliftForm(pose, _repCounter!.currentState);
+      default:
+        formCheck = FormCheckResult(hasError: false);
     }
-
-    final repTimingWarningActive =
-        _repCounter!.isError && _repCounter!.timingWarningMessage != null;
-    final combinedHasFormError = formCheck.hasError || repTimingWarningActive;
-    final combinedFormErrorMessage = formCheck.hasError
-        ? formCheck.errorMessage
-        : _repCounter!.timingWarningMessage;
-
-    // Build result
-    return PoseAnalysisResult.fromAnalysis(
-      count: _repCounter!.count,
-      state: _repCounter!.currentState,
-      feedbackMessage: _repCounter!.feedbackMessage,
-      angle: angle,
-      exerciseName: config.name,
-      hasFormError: combinedHasFormError,
-      formErrorMessage: combinedFormErrorMessage,
-    );
-  }
-
-  /// Analyze bench press form and return structured result
-  PoseAnalysisResult analyzeBenchPressForm(Pose pose) {
-    if (_repCounter == null) {
-      return PoseAnalysisResult.invalid('No exercise selected');
-    }
-
-    final config = _repCounter!.config;
-    final vertex = pose.landmarks[config.vertexJoint];
-    final pointA = pose.landmarks[config.pointA];
-    final pointB = pose.landmarks[config.pointB];
-
-    final confidenceCheck = _formChecker.checkTrackingConfidence(
-      vertex,
-      pointA,
-      pointB,
-    );
-
-    if (confidenceCheck.hasError) {
-      return PoseAnalysisResult.invalid(
-        confidenceCheck.errorMessage ?? 'Low tracking confidence',
-      );
-    }
-
-    final angle = AngleCalculator.calculateAngle(pointA!, vertex!, pointB!);
-    _repCounter!.update(angle);
-
-    final formCheck = _formChecker.checkAllBenchPressForm(
-      pose,
-      _repCounter!.currentState,
-    );
 
     final repTimingWarningActive =
         _repCounter!.isError && _repCounter!.timingWarningMessage != null;
@@ -179,15 +131,6 @@ class PoseDetectorService {
       hasFormError: combinedHasFormError,
       formErrorMessage: combinedFormErrorMessage,
     );
-  }
-
-  /// Analyze the currently-selected exercise.
-  PoseAnalysisResult analyzeCurrentExerciseForm(Pose pose) {
-    if (_currentExerciseKey == 'bench') {
-      return analyzeBenchPressForm(pose);
-    }
-
-    return analyzeSquatForm(pose);
   }
 
   /// Convert CameraImage to InputImage for ML Kit
@@ -221,7 +164,7 @@ class PoseDetectorService {
         _smoothedLandmarks[type] = _SmoothedLandmark(raw.x, raw.y, raw.z);
       } else {
         final prev = _smoothedLandmarks[type]!;
-        final alpha = _smoothingFactor;
+        const alpha = _smoothingFactor;
         prev.x = alpha * raw.x + (1 - alpha) * prev.x;
         prev.y = alpha * raw.y + (1 - alpha) * prev.y;
         prev.z = alpha * raw.z + (1 - alpha) * prev.z;
