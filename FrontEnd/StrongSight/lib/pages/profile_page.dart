@@ -14,7 +14,7 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  static const String BASE_URL = 'http://localhost:5001';
+  static const String BASE_URL = 'http://10.0.2.2:5001';
 
   bool _notificationsEnabled = true;
   bool _soundEnabled = true;

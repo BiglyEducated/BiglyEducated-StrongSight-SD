@@ -1,5 +1,5 @@
 import express from "express";
-import { signupUser, verifyToken, deleteUser, getUserInfo, editUserInfo, addWorkout, getUserWorkouts, getUserWorkoutsByDate, deleteUserProfile} from "../controllers/authController.js";
+import { signupUser, verifyToken, deleteUser, getUserInfo, editUserInfo, addWorkout, getUserWorkouts, getUserWorkoutsByDate, deleteUserProfile, editWorkout} from "../controllers/authController.js";
 import { get } from "http";
 
 const router = express.Router();
@@ -13,6 +13,7 @@ router.post("/verify-token", verifyToken);
 router.get('/get-userInfo', getUserInfo);
 router.put('/edit-userInfo', editUserInfo);
 router.delete('/delete-userProfile', deleteUserProfile);
+router.put('/edit-workout', editWorkout);
 
 //workouts
 router.post('/add-workout', addWorkout);

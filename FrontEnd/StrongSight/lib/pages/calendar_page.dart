@@ -20,7 +20,7 @@ class CalendarPage extends StatefulWidget {
 }
 
 class _CalendarPageState extends State<CalendarPage> {
-  static const String BASE_URL = 'http://localhost:5001';
+  static const String BASE_URL = 'http://10.0.2.2:5001';
 
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
@@ -570,8 +570,10 @@ class _CalendarPageState extends State<CalendarPage> {
                               );
 
                               // Save to backend
-                              final success =
-                                  await _saveWorkoutToBackend(day, newWorkout);
+                              final isEdit = workout != null;
+                              final success = await _saveWorkoutToBackend(
+                                  day, newWorkout,
+                                  isEdit: isEdit);
 
                               if (success && mounted) {
                                 setState(() {
@@ -629,7 +631,8 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   /// Save workout to backend API
-  Future<bool> _saveWorkoutToBackend(DateTime day, Workout workout) async {
+  Future<bool> _saveWorkoutToBackend(DateTime day, Workout workout,
+      {bool isEdit = false}) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -641,37 +644,56 @@ class _CalendarPageState extends State<CalendarPage> {
 
       // Transform Workout to API format
       final requestBody = {
+        if (isEdit) "workoutId": workout.id,
         "workoutName": workout.workoutName,
         "date": workout.date.toIso8601String().split('T')[0], // YYYY-MM-DD
         "exercises": workout.exercises
-            .map((e) => {
+            .map((e) => ({
                   "name": e.name,
                   "equipment": {
                     "id": e.equipment.id,
                     "name": e.equipment.name,
                   },
                   "sets": e.sets
-                      .map((s) => {
+                      .map((s) => ({
                             "reps": s.reps,
                             "weight": s.weight,
-                          })
+                          }))
                       .toList(),
-                })
+                }))
             .toList(),
       };
 
-      final uri = Uri.parse('$BASE_URL/api/auth/add-workout');
-      final response = await http.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $idToken',
-        },
-        body: json.encode(requestBody),
+      final uri = Uri.parse(
+        isEdit
+            ? '$BASE_URL/api/auth/edit-workout'
+            : '$BASE_URL/api/auth/add-workout',
       );
 
-      if (response.statusCode == 201) {
-        _showSnackBar("Workout saved successfully!");
+      final response = isEdit
+          ? await http.put(
+              uri,
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $idToken',
+              },
+              body: json.encode(requestBody),
+            )
+          : await http.post(
+              uri,
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $idToken',
+              },
+              body: json.encode(requestBody),
+            );
+
+      final successCode = isEdit ? 200 : 201;
+
+      if (response.statusCode == successCode) {
+        _showSnackBar(isEdit
+            ? "Workout updated successfully!"
+            : "Workout saved successfully!");
         return true;
       } else {
         final errorData = json.decode(response.body);
