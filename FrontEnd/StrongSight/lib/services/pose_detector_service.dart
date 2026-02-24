@@ -14,6 +14,10 @@ class PoseDetectorService {
   bool _isInitialized = false;
   String? _currentExercise;
 
+  // Smoothing - stores exponential moving average of each landmark position
+  static const double _smoothingFactor = 0.4; // lower = smoother but more lag
+  final Map<PoseLandmarkType, _SmoothedLandmark> _smoothedLandmarks = {};
+
   bool get isInitialized => _isInitialized;
 
   Future<void> initialize() async {
@@ -36,6 +40,7 @@ class PoseDetectorService {
       print('Found: ${config.name}');
       _repCounter = RepCounter(config);
       _formChecker.reset();
+      _smoothedLandmarks.clear();
       _currentExercise = key;
     } else {
       print('NOT FOUND. Available: ${ExerciseLibrary.configs.keys}');
@@ -52,7 +57,8 @@ class PoseDetectorService {
   PoseAnalysisResult analyzeSquatForm(Pose pose) => _analyzeExerciseForm(pose);
   PoseAnalysisResult analyzeBenchForm(Pose pose) => _analyzeExerciseForm(pose);
 
-  PoseAnalysisResult _analyzeExerciseForm(Pose pose) {
+  PoseAnalysisResult _analyzeExerciseForm(Pose rawPose) {
+    final pose = _smoothPose(rawPose);
     if (_repCounter == null || _currentExercise == null) {
       print('ERROR: repCounter=${_repCounter == null}, exercise=$_currentExercise');
       return PoseAnalysisResult.invalid('No exercise selected');
@@ -112,7 +118,43 @@ class PoseDetectorService {
     );
   }
 
+  // Applies EMA smoothing to all landmarks in a pose
+  Pose _smoothPose(Pose pose) {
+    final smoothed = <PoseLandmarkType, PoseLandmark>{};
+
+    for (final entry in pose.landmarks.entries) {
+      final type = entry.key;
+      final raw = entry.value;
+
+      if (!_smoothedLandmarks.containsKey(type)) {
+        _smoothedLandmarks[type] = _SmoothedLandmark(raw.x, raw.y, raw.z);
+      } else {
+        final prev = _smoothedLandmarks[type]!;
+        final alpha = _smoothingFactor;
+        prev.x = alpha * raw.x + (1 - alpha) * prev.x;
+        prev.y = alpha * raw.y + (1 - alpha) * prev.y;
+        prev.z = alpha * raw.z + (1 - alpha) * prev.z;
+      }
+
+      final s = _smoothedLandmarks[type]!;
+      smoothed[type] = PoseLandmark(
+        type: type,
+        x: s.x,
+        y: s.y,
+        z: s.z,
+        likelihood: raw.likelihood,
+      );
+    }
+
+    return Pose(landmarks: smoothed);
+  }
+
   void dispose() {
     _poseDetector.close();
   }
+}
+
+class _SmoothedLandmark {
+  double x, y, z;
+  _SmoothedLandmark(this.x, this.y, this.z);
 }

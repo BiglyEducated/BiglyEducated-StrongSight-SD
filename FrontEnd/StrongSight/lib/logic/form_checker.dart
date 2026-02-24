@@ -7,6 +7,10 @@ class FormChecker {
   int _kneeCaveFrameCount = 0;
   static const int _kneeCaveThresholdFrames = 3;
   static const double _kneeCaveRatio = 0.75;
+
+  // Baseline knee/ankle ratio captured at start of descent
+  double? _baselineKneeAnkleRatio;
+  ExerciseState _previousState = ExerciseState.standing;
   
   int _asymmetryFrameCount = 0;
   static const int _asymmetryThresholdFrames = 5;
@@ -40,10 +44,15 @@ class FormChecker {
   int _errorDisplayFrames = 0;
   static const int _errorPersistFrames = 15;
   
-  static const double _minConfidence = 0.6;
+  // Per-joint confidence thresholds - joints that are harder to detect get lower thresholds
+  static const double _confidenceHigh = 0.75;  // hips, shoulders (large, stable joints)
+  static const double _confidenceMed  = 0.65;  // knees, elbows
+  static const double _confidenceLow  = 0.55;  // ankles, wrists (small, often occluded)
 
   void reset() {
     _kneeCaveFrameCount = 0;
+    _baselineKneeAnkleRatio = null;
+    _previousState = ExerciseState.standing;
     _asymmetryFrameCount = 0;
     _forwardLeanFrameCount = 0;
     _elbowFlareFrameCount = 0;
@@ -64,12 +73,16 @@ class FormChecker {
     final rightAnkle = pose.landmarks[PoseLandmarkType.rightAnkle];
 
     if (leftKnee == null || rightKnee == null || leftAnkle == null || rightAnkle == null ||
-        leftKnee.likelihood < _minConfidence || rightKnee.likelihood < _minConfidence) {
+        leftKnee.likelihood < _confidenceMed || rightKnee.likelihood < _confidenceMed ||
+        leftAnkle.likelihood < _confidenceLow || rightAnkle.likelihood < _confidenceLow) {
       _kneeCaveFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
 
-    bool isRelevantPhase = currentState == ExerciseState.descent || currentState == ExerciseState.bottom;
+    // Knee cave can happen on the way down, at the bottom, AND on the way back up
+    bool isRelevantPhase = currentState == ExerciseState.descent ||
+                           currentState == ExerciseState.bottom ||
+                           currentState == ExerciseState.ascending;
     if (!isRelevantPhase) {
       _kneeCaveFrameCount = 0;
       return FormCheckResult(hasError: false);
@@ -85,7 +98,18 @@ class FormChecker {
 
     double ratio = kneeDist / ankleDist;
 
-    if (ratio < _kneeCaveRatio) {
+    // Capture baseline at the moment descent begins
+    if (_previousState == ExerciseState.standing && currentState == ExerciseState.descent) {
+      _baselineKneeAnkleRatio = ratio;
+    }
+    _previousState = currentState;
+
+    // Use baseline-relative threshold if we have one, otherwise fall back to fixed ratio
+    final threshold = _baselineKneeAnkleRatio != null
+        ? _baselineKneeAnkleRatio! * 0.85  // flag if knees cave 15% inward from their own starting position
+        : _kneeCaveRatio;
+
+    if (ratio < threshold) {
       _kneeCaveFrameCount++;
     } else {
       _kneeCaveFrameCount = 0;
@@ -111,13 +135,17 @@ class FormChecker {
     final rightKnee = pose.landmarks[PoseLandmarkType.rightKnee];
 
     if (leftShoulder == null || rightShoulder == null || leftHip == null || rightHip == null ||
-        leftKnee == null || rightKnee == null || leftShoulder.likelihood < _minConfidence ||
-        leftHip.likelihood < _minConfidence) {
+        leftKnee == null || rightKnee == null ||
+        leftShoulder.likelihood < _confidenceHigh || leftHip.likelihood < _confidenceHigh) {
       _forwardLeanFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
 
-    bool isRelevantPhase = currentState == ExerciseState.descent || currentState == ExerciseState.bottom;
+    // Forward lean is relevant throughout the entire rep including lockout
+    bool isRelevantPhase = currentState == ExerciseState.descent ||
+                           currentState == ExerciseState.bottom ||
+                           currentState == ExerciseState.ascending ||
+                           currentState == ExerciseState.standing;
     if (!isRelevantPhase) {
       _forwardLeanFrameCount = 0;
       return FormCheckResult(hasError: false);
@@ -163,12 +191,16 @@ class FormChecker {
 
     if (leftHip == null || leftKnee == null || leftAnkle == null ||
         rightHip == null || rightKnee == null || rightAnkle == null ||
-        leftKnee.likelihood < _minConfidence || rightKnee.likelihood < _minConfidence) {
+        leftKnee.likelihood < _confidenceMed || rightKnee.likelihood < _confidenceMed ||
+        leftHip.likelihood < _confidenceHigh || rightHip.likelihood < _confidenceHigh) {
       _asymmetryFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
 
-    bool isRelevantPhase = currentState == ExerciseState.descent || currentState == ExerciseState.bottom;
+    // Asymmetry is relevant throughout the entire rep
+    bool isRelevantPhase = currentState == ExerciseState.descent ||
+                           currentState == ExerciseState.bottom ||
+                           currentState == ExerciseState.ascending;
     if (!isRelevantPhase) {
       _asymmetryFrameCount = 0;
       return FormCheckResult(hasError: false);
@@ -202,7 +234,8 @@ class FormChecker {
     final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
 
     if (leftShoulder == null || leftElbow == null || leftHip == null ||
-        leftShoulder.likelihood < _minConfidence || leftElbow.likelihood < _minConfidence) {
+        leftShoulder.likelihood < _confidenceHigh || leftElbow.likelihood < _confidenceMed ||
+        leftHip.likelihood < _confidenceHigh) {
       _elbowFlareFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
@@ -241,7 +274,8 @@ class FormChecker {
 
     if (leftShoulder == null || leftElbow == null || leftWrist == null ||
         rightShoulder == null || rightElbow == null || rightWrist == null ||
-        leftElbow.likelihood < _minConfidence || rightElbow.likelihood < _minConfidence) {
+        leftElbow.likelihood < _confidenceMed || rightElbow.likelihood < _confidenceMed ||
+        leftWrist.likelihood < _confidenceLow || rightWrist.likelihood < _confidenceLow) {
       _benchAsymmetryFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
@@ -298,12 +332,17 @@ class FormChecker {
     final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
 
     if (leftShoulder == null || leftHip == null || leftKnee == null ||
-        leftShoulder.likelihood < _minConfidence || leftHip.likelihood < _minConfidence) {
+        leftShoulder.likelihood < _confidenceHigh || leftHip.likelihood < _confidenceHigh ||
+        leftKnee.likelihood < _confidenceMed) {
       _backRoundingFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
 
-    bool isRelevantPhase = currentState == ExerciseState.descent || currentState == ExerciseState.bottom;
+    // Back rounding is dangerous throughout the entire deadlift including lockout
+    bool isRelevantPhase = currentState == ExerciseState.descent ||
+                           currentState == ExerciseState.bottom ||
+                           currentState == ExerciseState.ascending ||
+                           currentState == ExerciseState.standing;
     if (!isRelevantPhase) {
       _backRoundingFrameCount = 0;
       return FormCheckResult(hasError: false);
@@ -337,7 +376,8 @@ class FormChecker {
 
     if (leftHip == null || leftKnee == null || leftAnkle == null ||
         rightHip == null || rightKnee == null || rightAnkle == null ||
-        leftHip.likelihood < _minConfidence || rightHip.likelihood < _minConfidence) {
+        leftHip.likelihood < _confidenceHigh || rightHip.likelihood < _confidenceHigh ||
+        leftKnee.likelihood < _confidenceMed || rightKnee.likelihood < _confidenceMed) {
       _deadliftAsymmetryFrameCount = 0;
       return FormCheckResult(hasError: false);
     }

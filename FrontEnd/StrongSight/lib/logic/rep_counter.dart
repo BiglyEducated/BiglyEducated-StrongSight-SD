@@ -38,7 +38,7 @@ class RepCounter {
     switch (currentState) {
       case ExerciseState.standing:
         isError = false;
-        if (_smoothedAngle < config.standingThreshold - 20) {
+        if (_smoothedAngle < config.standingThreshold - 5) {
           _transitionTo(ExerciseState.descent, _getDescentMessage());
         }
         break;
@@ -49,9 +49,10 @@ class RepCounter {
           if (_consecutiveFrames >= _frameThreshold) {
             _transitionTo(ExerciseState.bottom, _getBottomMessage());
           }
-        } else if (_smoothedAngle > config.standingThreshold - 10) {
-           currentState = ExerciseState.standing;
-           _consecutiveFrames = 0;
+        } else if (_smoothedAngle > config.standingThreshold - 2) {
+          // Only go back to standing if almost fully upright (large hysteresis gap)
+          currentState = ExerciseState.standing;
+          _consecutiveFrames = 0;
         } else {
           _consecutiveFrames = 0;
         }
