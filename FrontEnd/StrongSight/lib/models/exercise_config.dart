@@ -12,6 +12,11 @@ class ExerciseConfig {
   final double velocityLimit;
   final String optimalAngle;
   final String cameraHeight;
+  final String readyCue;
+  final String descentCue;
+  final String bottomCue;
+  final String ascentCue;
+  final String repCompleteCue;
 
   ExerciseConfig({
     required this.name,
@@ -23,6 +28,11 @@ class ExerciseConfig {
     this.velocityLimit = 5.0,
     required this.optimalAngle,
     required this.cameraHeight,
+    this.readyCue = "Ready? Begin your descent.",
+    this.descentCue = "Lowering... keep it controlled.",
+    this.bottomCue = "Good depth! Now push up.",
+    this.ascentCue = "Push through!",
+    this.repCompleteCue = "Rep Complete! Next one.",
   });
 }
 
@@ -57,6 +67,11 @@ class ExerciseLibrary {
       bottomThreshold: 70.0,
       optimalAngle: "Side (45°)",
       cameraHeight: "Bench Height",
+      readyCue: "Set your arch and brace. Lower with control.",
+      descentCue: "Lower to chest under control.",
+      bottomCue: "Good touch. Press strong!",
+      ascentCue: "Drive the bar up evenly.",
+      repCompleteCue: "Bench rep locked out. Go again.",
     ),
     'deadlift': ExerciseConfig(
       name: "Deadlift",

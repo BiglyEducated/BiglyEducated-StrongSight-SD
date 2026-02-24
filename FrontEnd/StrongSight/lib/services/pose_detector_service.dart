@@ -19,6 +19,10 @@ class PoseDetectorService {
   final Map<PoseLandmarkType, _SmoothedLandmark> _smoothedLandmarks = {};
 
   bool get isInitialized => _isInitialized;
+  double? get averageEccentricDurationSeconds =>
+      _repCounter?.averageEccentricDurationSeconds;
+  double? get averageConcentricDurationSeconds =>
+      _repCounter?.averageConcentricDurationSeconds;
 
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -32,23 +36,40 @@ class PoseDetectorService {
   }
 
   void setExercise(String exerciseName) {
-    print('setExercise: "$exerciseName"');
-    final key = exerciseName.toLowerCase();
-    print('Looking for: "$key"');
-    final config = ExerciseLibrary.configs[key];
+    final normalizedName = exerciseName.toLowerCase().trim();
+    final configKey = _resolveExerciseKey(normalizedName);
+    final config = ExerciseLibrary.configs[configKey];
     if (config != null) {
       print('Found: ${config.name}');
       _repCounter = RepCounter(config);
       _formChecker.reset();
-      _smoothedLandmarks.clear();
-      _currentExercise = key;
-    } else {
-      print('NOT FOUND. Available: ${ExerciseLibrary.configs.keys}');
+      _currentExerciseKey = configKey;
     }
   }
 
-  Future<List<Pose>> detectPoses(CameraImage image, InputImageRotation rotation) async {
-    if (!_isInitialized) throw Exception('Not initialized');
+  String _resolveExerciseKey(String normalizedName) {
+    if (ExerciseLibrary.configs.containsKey(normalizedName)) {
+      return normalizedName;
+    }
+
+    if (normalizedName.contains('bench')) return 'bench';
+    if (normalizedName.contains('squat')) return 'squat';
+    if (normalizedName.contains('deadlift')) return 'deadlift';
+    if (normalizedName.contains('row')) return 'row';
+    if (normalizedName.contains('overhead')) return 'overhead';
+
+    return normalizedName;
+  }
+
+  /// Detect poses from camera image
+  Future<List<Pose>> detectPoses(
+    CameraImage image,
+    InputImageRotation rotation,
+  ) async {
+    if (!_isInitialized) {
+      throw Exception('PoseDetectorService not initialized');
+    }
+
     final inputImage = _inputImageFromCameraImage(image, rotation);
     if (inputImage == null) return [];
     return await _poseDetector.processImage(inputImage);
@@ -92,18 +113,88 @@ class PoseDetectorService {
       formCheck = FormCheckResult(hasError: false);
     }
 
+    final repTimingWarningActive =
+        _repCounter!.isError && _repCounter!.timingWarningMessage != null;
+    final combinedHasFormError = formCheck.hasError || repTimingWarningActive;
+    final combinedFormErrorMessage = formCheck.hasError
+        ? formCheck.errorMessage
+        : _repCounter!.timingWarningMessage;
+
+    // Build result
     return PoseAnalysisResult.fromAnalysis(
       count: _repCounter!.count,
       state: _repCounter!.currentState,
       feedbackMessage: _repCounter!.feedbackMessage,
       angle: angle,
-      hasFormError: formCheck.hasError,
-      formErrorMessage: formCheck.errorMessage,
       exerciseName: config.name,
+      hasFormError: combinedHasFormError,
+      formErrorMessage: combinedFormErrorMessage,
     );
   }
 
-  InputImage? _inputImageFromCameraImage(CameraImage image, InputImageRotation rotation) {
+  /// Analyze bench press form and return structured result
+  PoseAnalysisResult analyzeBenchPressForm(Pose pose) {
+    if (_repCounter == null) {
+      return PoseAnalysisResult.invalid('No exercise selected');
+    }
+
+    final config = _repCounter!.config;
+    final vertex = pose.landmarks[config.vertexJoint];
+    final pointA = pose.landmarks[config.pointA];
+    final pointB = pose.landmarks[config.pointB];
+
+    final confidenceCheck = _formChecker.checkTrackingConfidence(
+      vertex,
+      pointA,
+      pointB,
+    );
+
+    if (confidenceCheck.hasError) {
+      return PoseAnalysisResult.invalid(
+        confidenceCheck.errorMessage ?? 'Low tracking confidence',
+      );
+    }
+
+    final angle = AngleCalculator.calculateAngle(pointA!, vertex!, pointB!);
+    _repCounter!.update(angle);
+
+    final formCheck = _formChecker.checkAllBenchPressForm(
+      pose,
+      _repCounter!.currentState,
+    );
+
+    final repTimingWarningActive =
+        _repCounter!.isError && _repCounter!.timingWarningMessage != null;
+    final combinedHasFormError = formCheck.hasError || repTimingWarningActive;
+    final combinedFormErrorMessage = formCheck.hasError
+        ? formCheck.errorMessage
+        : _repCounter!.timingWarningMessage;
+
+    return PoseAnalysisResult.fromAnalysis(
+      count: _repCounter!.count,
+      state: _repCounter!.currentState,
+      feedbackMessage: _repCounter!.feedbackMessage,
+      angle: angle,
+      exerciseName: config.name,
+      hasFormError: combinedHasFormError,
+      formErrorMessage: combinedFormErrorMessage,
+    );
+  }
+
+  /// Analyze the currently-selected exercise.
+  PoseAnalysisResult analyzeCurrentExerciseForm(Pose pose) {
+    if (_currentExerciseKey == 'bench') {
+      return analyzeBenchPressForm(pose);
+    }
+
+    return analyzeSquatForm(pose);
+  }
+
+  /// Convert CameraImage to InputImage for ML Kit
+  InputImage? _inputImageFromCameraImage(
+    CameraImage image,
+    InputImageRotation rotation,
+  ) {
     final format = InputImageFormatValue.fromRawValue(image.format.raw);
     if (format == null || image.planes.isEmpty) return null;
     final plane = image.planes.first;

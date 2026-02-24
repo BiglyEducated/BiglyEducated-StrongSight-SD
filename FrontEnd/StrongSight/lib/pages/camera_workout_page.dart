@@ -10,6 +10,7 @@ import '../services/rep_sound_service.dart';
 
 import 'widgets/pose_overlay_painter.dart';
 import 'widgets/workout_stats_overlay.dart';
+import 'workout_feedback_summary_page.dart';
 
 class CameraWorkoutPage extends StatefulWidget {
   final String exerciseName;
@@ -45,6 +46,10 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
   int _lastRepCountForSound = 0;
   bool _lastRedForSound = false;
   String _lastRedMsgForSound = '';
+
+  // Session-level form tracking for end-of-workout summary
+  final Map<String, int> _formIssueCounts = {};
+  String? _activeFormIssueKey;
 
   @override
   void initState() {
@@ -118,7 +123,10 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
         feedback.contains('⚠️') ||
         feedback.contains('CAVE') ||
         feedback.contains('LEAN') ||
-        feedback.contains('UNEVEN');
+        feedback.contains('UNEVEN') ||
+        feedback.contains('FLARE') ||
+        feedback.contains('WRIST') ||
+        feedback.contains('TILT');
   }
 
   void _maybePlaySounds({
@@ -146,6 +154,65 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
     _lastRedForSound = isRed;
   }
 
+  String? _extractFormIssueKey(String feedback, bool hasFormError) {
+    if (!hasFormError) return null;
+
+    final normalized = feedback.toUpperCase();
+    if (normalized.contains('KNEE CAVE')) return 'Knee cave';
+    if (normalized.contains('FORWARD LEAN')) return 'Forward lean';
+    if (normalized.contains('UNEVEN')) return 'Uneven movement';
+    if (normalized.contains('ELBOW FLARE')) return 'Elbow flare';
+    if (normalized.contains('WRIST STACK')) return 'Wrist stacking';
+    if (normalized.contains('BAR TILT')) return 'Bar tilt / uneven press';
+    if (normalized.contains('LOWER THE WEIGHT MORE CONTROLLED')) {
+      return 'Eccentric too fast';
+    }
+    if (normalized.contains('AVOID BOUNCING OUT OF THE BOTTOM')) {
+      return 'Bounced out of bottom';
+    }
+    return 'General form breakdown';
+  }
+
+  void _trackFormIssues({
+    required String feedback,
+    required bool hasFormError,
+  }) {
+    final issueKey = _extractFormIssueKey(feedback, hasFormError);
+
+    if (issueKey == null) {
+      _activeFormIssueKey = null;
+      return;
+    }
+
+    // Count only when a warning first appears or changes category.
+    if (_activeFormIssueKey != issueKey) {
+      _formIssueCounts.update(issueKey, (value) => value + 1, ifAbsent: () => 1);
+    }
+
+    _activeFormIssueKey = issueKey;
+  }
+
+  Future<void> _finishWorkout() async {
+    await _cameraService.stopImageStream();
+    if (!mounted) return;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WorkoutFeedbackSummaryPage(
+          exerciseName: widget.exerciseName,
+          repCount: _repCount,
+          formIssueCounts: Map<String, int>.from(_formIssueCounts),
+          averageEccentricSeconds: _poseDetector.averageEccentricDurationSeconds,
+          averageConcentricSeconds: _poseDetector.averageConcentricDurationSeconds,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+    Navigator.pop(context, _repCount);
+  }
+
   Future<void> _processCameraImage(CameraImage image) async {
     // Frame skipping for performance
     _frameSkipCounter++;
@@ -165,7 +232,7 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
       if (!mounted) return;
 
       if (poses.isNotEmpty) {
-        final analysis = _poseDetector.analyzeSquatForm(poses.first);
+        final analysis = _poseDetector.analyzeCurrentExerciseForm(poses.first);
 
         if (analysis.isValid) {
           final int newRepCount = analysis.repCount;
@@ -178,6 +245,10 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
             newRepCount: newRepCount,
             newFeedback: newFeedback,
             newHasFormError: newHasFormError,
+          );
+          _trackFormIssues(
+            feedback: newFeedback,
+            hasFormError: newHasFormError,
           );
 
           setState(() {
@@ -345,12 +416,7 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
                       left: 20,
                       right: 20,
                       child: FinishWorkoutButton(
-                        onPressed: () async {
-                          await _cameraService.stopImageStream();
-                          if (mounted) {
-                            Navigator.pop(context, _repCount);
-                          }
-                        },
+                        onPressed: _finishWorkout,
                       ),
                     ),
                   ],

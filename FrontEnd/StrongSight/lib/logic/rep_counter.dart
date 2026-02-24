@@ -14,8 +14,27 @@ class RepCounter {
 
   String feedbackMessage = "Ready? Begin your descent.";
   bool isError = false;
+  String? timingWarningMessage;
 
-  RepCounter(this.config);
+  // Loose safety timing checks (seconds)
+  static const double _minEccentricSeconds = 0.7;
+  static const double _minConcentricSeconds = 0.5;
+  DateTime? _descentStartTime;
+  DateTime? _bottomReachedTime;
+  double? lastEccentricDurationSeconds;
+  double? lastConcentricDurationSeconds;
+  double _totalEccentricDurationSeconds = 0.0;
+  double _totalConcentricDurationSeconds = 0.0;
+  int _eccentricSamples = 0;
+  int _concentricSamples = 0;
+
+  double? get averageEccentricDurationSeconds =>
+      _eccentricSamples == 0 ? null : _totalEccentricDurationSeconds / _eccentricSamples;
+
+  double? get averageConcentricDurationSeconds =>
+      _concentricSamples == 0 ? null : _totalConcentricDurationSeconds / _concentricSamples;
+
+  RepCounter(this.config) : feedbackMessage = config.readyCue;
 
   void update(double rawAngle) {
     if (!_isInitialized) {
@@ -37,7 +56,6 @@ class RepCounter {
 
     switch (currentState) {
       case ExerciseState.standing:
-        isError = false;
         if (_smoothedAngle < config.standingThreshold - 5) {
           _transitionTo(ExerciseState.descent, _getDescentMessage());
         }
@@ -84,7 +102,41 @@ class RepCounter {
   }
 
   void _transitionTo(ExerciseState newState, String msg) {
-    print('${config.name} - Transition: $currentState → $newState');
+    final now = DateTime.now();
+
+    if (newState == ExerciseState.descent) {
+      _descentStartTime = now;
+    }
+
+    if (newState == ExerciseState.bottom) {
+      if (_descentStartTime != null) {
+        lastEccentricDurationSeconds =
+            now.difference(_descentStartTime!).inMilliseconds / 1000.0;
+        _totalEccentricDurationSeconds += lastEccentricDurationSeconds!;
+        _eccentricSamples++;
+
+        if (lastEccentricDurationSeconds! < _minEccentricSeconds) {
+          isError = true;
+          timingWarningMessage = "Lower the weight more controlled.";
+        }
+      }
+      _bottomReachedTime = now;
+    }
+
+    if (newState == ExerciseState.standing &&
+        currentState == ExerciseState.ascending &&
+        _bottomReachedTime != null) {
+      lastConcentricDurationSeconds =
+          now.difference(_bottomReachedTime!).inMilliseconds / 1000.0;
+      _totalConcentricDurationSeconds += lastConcentricDurationSeconds!;
+      _concentricSamples++;
+
+      if (lastConcentricDurationSeconds! < _minConcentricSeconds) {
+        isError = true;
+        timingWarningMessage = "Avoid bouncing out of the bottom.";
+      }
+    }
+
     currentState = newState;
     feedbackMessage = msg;
     _consecutiveFrames = 0;
