@@ -2,11 +2,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:camera/camera.dart';
+import 'package:provider/provider.dart';
 
 import '../services/pose_detector_service.dart';
 import '../services/camera_service.dart';
 import '../services/camera_utils.dart';
 import '../services/rep_sound_service.dart';
+import '../providers/theme_provider.dart';
 
 import 'widgets/pose_overlay_painter.dart';
 import 'widgets/workout_stats_overlay.dart';
@@ -287,20 +289,33 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+
+    const ivory = Color(0xFFF3EBD3);
+    const espresso = Color(0xFF12110F);
+    const lightModeGreen = Color(0xFF094941);
+    const darkModeGreen = Color(0xFF039E39);
+    const darkCard = Color(0xFF1A1917);
+
+    final bgColor = isDark ? espresso : const Color(0xFFFCF5E3);
+    final appBarColor = ivory;
+    final appBarTextColor = lightModeGreen;
+    final bodyTextColor = isDark ? Colors.white : lightModeGreen;
+    final accentColor = isDark ? darkModeGreen : lightModeGreen;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: appBarColor,
         title: Text(
           widget.exerciseName,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: appBarTextColor),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: appBarTextColor),
         actions: [
           if (_cameraService.cameras.length > 1)
             IconButton(
-              icon: const Icon(Icons.flip_camera_ios, color: Colors.white),
+              icon: Icon(Icons.flip_camera_ios, color: appBarTextColor),
               onPressed: _cameraService.isInitialized ? _switchCamera : null,
             ),
 
@@ -309,7 +324,7 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
             tooltip: _isMuted ? 'Unmute' : 'Mute',
             icon: Icon(
               _isMuted ? Icons.volume_off : Icons.volume_up,
-              color: Colors.white,
+              color: appBarTextColor,
             ),
             onPressed: () {
               setState(() {
@@ -334,8 +349,8 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
                     const SizedBox(height: 20),
                     Text(
                       _errorMessage!,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: bodyTextColor,
                         fontSize: 16,
                       ),
                       textAlign: TextAlign.center,
@@ -348,6 +363,10 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
                         });
                         _initializeCamera();
                       },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentColor,
+                        foregroundColor: Colors.white,
+                      ),
                       child: const Text('Retry'),
                     ),
                   ],
@@ -355,15 +374,15 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
               ),
             )
           : !_cameraService.isInitialized
-              ? const Center(
+              ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      CircularProgressIndicator(color: Color(0xFF039E39)),
-                      SizedBox(height: 16),
+                      CircularProgressIndicator(color: accentColor),
+                      const SizedBox(height: 16),
                       Text(
                         'Initializing camera...',
-                        style: TextStyle(color: Colors.white),
+                        style: TextStyle(color: bodyTextColor),
                       ),
                     ],
                   ),
@@ -374,9 +393,9 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
                     // Camera Preview
                     Center(
                       child: _cameraService.controller == null
-                          ? const Text(
+                          ? Text(
                               'Camera controller is null',
-                              style: TextStyle(color: Colors.white),
+                              style: TextStyle(color: bodyTextColor),
                             )
                           : CameraPreview(_cameraService.controller!),
                     ),
@@ -417,6 +436,7 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
                       right: 20,
                       child: FinishWorkoutButton(
                         onPressed: _finishWorkout,
+                        isDarkMode: isDark,
                       ),
                     ),
                   ],
