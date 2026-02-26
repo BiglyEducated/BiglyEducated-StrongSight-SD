@@ -1,4 +1,6 @@
 // lib/pages/camera_workout_page.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:camera/camera.dart';
@@ -40,6 +42,9 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
   List<Pose> _detectedPoses = [];
   int _frameSkipCounter = 0;
   static const int _frameSkipRate = 3;
+  static const int _setupDurationSeconds = 10;
+  Timer? _setupTimer;
+  int _setupCountdownSeconds = _setupDurationSeconds;
 
   // Mute toggle (UI only for now - no persistence yet)
   bool _isMuted = false;
@@ -92,6 +97,7 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
 
       print('CameraWorkoutPage: Starting image stream...');
       _cameraService.startImageStream(_processCameraImage);
+      _startSetupCountdown();
       print('CameraWorkoutPage: Initialization complete!');
     } catch (e, stackTrace) {
       print('CameraWorkoutPage ERROR: $e');
@@ -115,9 +121,40 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
 
       await Future.delayed(const Duration(milliseconds: 500));
       _cameraService.startImageStream(_processCameraImage);
+      _startSetupCountdown();
     } catch (e) {
       print('Error switching camera: $e');
     }
+  }
+
+  void _startSetupCountdown() {
+    _setupTimer?.cancel();
+
+    if (!mounted) return;
+    setState(() {
+      _setupCountdownSeconds = _setupDurationSeconds;
+      _feedback = 'Set up your position';
+      _detectedPoses = [];
+    });
+
+    _setupTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      if (_setupCountdownSeconds <= 1) {
+        timer.cancel();
+        setState(() {
+          _setupCountdownSeconds = 0;
+          _feedback = 'Position yourself in frame';
+        });
+      } else {
+        setState(() {
+          _setupCountdownSeconds--;
+        });
+      }
+    });
   }
 
   bool _isRedFeedback(String feedback, bool hasFormError) {
@@ -216,6 +253,9 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
   }
 
   Future<void> _processCameraImage(CameraImage image) async {
+    // Setup period: show camera only, do not run form analysis yet.
+    if (_setupCountdownSeconds > 0) return;
+
     // Frame skipping for performance
     _frameSkipCounter++;
     if (_frameSkipCounter % _frameSkipRate != 0) return;
@@ -439,6 +479,59 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
                         isDarkMode: isDark,
                       ),
                     ),
+
+                    // Setup countdown overlay (blocks analysis until complete).
+                    if (_setupCountdownSeconds > 0)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.35),
+                          alignment: Alignment.center,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 18,
+                            ),
+                            decoration: BoxDecoration(
+                              color: darkCard.withValues(alpha: 0.85),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: accentColor.withValues(alpha: 0.8),
+                                width: 1.4,
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  'Starting in',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  '$_setupCountdownSeconds',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 48,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Get set in frame',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
     );
@@ -447,6 +540,7 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
   @override
   void dispose() {
     print('CameraWorkoutPage: dispose called');
+    _setupTimer?.cancel();
     _cameraService.dispose();
     _poseDetector.dispose();
     _soundService.dispose();

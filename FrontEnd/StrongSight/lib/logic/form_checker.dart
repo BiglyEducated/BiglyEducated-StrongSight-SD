@@ -13,7 +13,7 @@ class FormChecker {
 
   int _asymmetryFrameCount = 0;
   static const int _asymmetryThresholdFrames = 5;
-  static const double _asymmetryAngleDiff = 20.0;
+  static const double _asymmetryAngleDiff = 22.0;
 
   int _forwardLeanFrameCount = 0;
   static const int _forwardLeanThresholdFrames = 3;
@@ -39,7 +39,7 @@ class FormChecker {
 
   int _deadliftAsymmetryFrameCount = 0;
   static const int _deadliftAsymmetryThresholdFrames = 4;
-  static const double _deadliftAsymmetryAngleDiff = 15.0;
+  static const double _deadliftAsymmetryAngleDiff = 17.0;
 
   // Error persistence
   String? _lastErrorMessage;
