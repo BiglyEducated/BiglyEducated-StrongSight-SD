@@ -110,7 +110,7 @@ class FormChecker {
     _previousState = currentState;
 
     final threshold = _baselineKneeAnkleRatio != null
-        ? _baselineKneeAnkleRatio! * 0.85
+        ? _baselineKneeAnkleRatio! * 0.90
         : _kneeCaveRatio;
 
     if (ratio < threshold) {

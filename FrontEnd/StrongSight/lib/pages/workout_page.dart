@@ -21,7 +21,6 @@ class _WorkoutPageState extends State<WorkoutPage> {
     "Barbell Row",
     "Overhead Press",
     "Deadlift",
-    "Bicep Curls",
   ];
 
   void _startRecording() async {
