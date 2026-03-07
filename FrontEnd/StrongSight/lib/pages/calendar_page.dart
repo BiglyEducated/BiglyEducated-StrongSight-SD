@@ -20,7 +20,7 @@ class CalendarPage extends StatefulWidget {
 }
 
 class _CalendarPageState extends State<CalendarPage> {
-  static const String BASE_URL = 'http://10.0.2.2:5001';
+  static const String BASE_URL = 'http://localhost:5001';
 
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
@@ -366,6 +366,9 @@ class _CalendarPageState extends State<CalendarPage> {
               const SizedBox(width: 8),
               TextButton(
                 onPressed: () => _deleteWorkout(day),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red,
+                ),
                 child: const Text("Delete"),
               ),
             ],
@@ -624,10 +627,64 @@ class _CalendarPageState extends State<CalendarPage> {
     );
   }
 
-  void _deleteWorkout(DateTime day) {
-    setState(() {
-      _workoutsByDay.remove(_normalize(day));
-    });
+  void _deleteWorkout(DateTime day) async {
+    final workout = _getWorkout(day);
+    if (workout == null) return;
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Delete Workout"),
+        content:
+            Text("Are you sure you want to delete '${workout.workoutName}'?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Delete", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        _showSnackBar("No user logged in");
+        return;
+      }
+
+      final idToken = await user.getIdToken();
+
+      final uri = Uri.parse('$BASE_URL/api/auth/delete-workout');
+      final response = await http.delete(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $idToken',
+        },
+        body: json.encode({'workoutId': workout.id}),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _workoutsByDay.remove(_normalize(day));
+        });
+        _showSnackBar("Workout deleted successfully!");
+      } else {
+        final errorData = json.decode(response.body);
+        _showSnackBar(
+            "Failed to delete: ${errorData['error'] ?? 'Unknown error'}");
+      }
+    } catch (e) {
+      _showSnackBar("Error deleting workout: $e");
+    }
   }
 
   /// Save workout to backend API

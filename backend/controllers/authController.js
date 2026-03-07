@@ -517,3 +517,50 @@ export const editWorkout = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+/**
+ * DELETE WORKOUT
+ * Expects body: { workoutId }
+ * Requires Authorization: Bearer <token>
+ */
+export const deleteWorkout = async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing or invalid token" });
+    }
+
+    const idToken = authHeader.split("Bearer ")[1];
+    const decodedToken = await getAuth().verifyIdToken(idToken);
+    const uid = decodedToken.uid;
+
+    const { workoutId } = req.body;
+
+    if (!workoutId) {
+      return res.status(400).json({ error: "Missing workout ID" });
+    }
+
+    // Verify the workout exists and belongs to this user
+    const workoutRef = db.collection("workouts_completed").doc(workoutId);
+    const workoutDoc = await workoutRef.get();
+
+    if (!workoutDoc.exists) {
+      return res.status(404).json({ error: "Workout not found" });
+    }
+
+    if (workoutDoc.data().uid !== uid) {
+      return res.status(403).json({ error: "Not authorized to delete this workout" });
+    }
+
+    // Delete the workout
+    await workoutRef.delete();
+
+    return res.status(200).json({
+      message: "Workout deleted successfully",
+      id: workoutId,
+    });
+  } catch (error) {
+    console.error("Error deleting workout:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
