@@ -21,6 +21,10 @@ Equipment mapEquipmentTypeToEquipment(EquipmentType type) {
       return const Equipment(id: 'pullup_bar', name: 'Pull-up Bar');
     case EquipmentType.mat:
       return const Equipment(id: 'mat', name: 'Mat');
+    case EquipmentType.medicineBall:
+      return const Equipment(id: 'medicine_ball', name: 'Medicine Ball');
+    case EquipmentType.plate:
+      return const Equipment(id: 'plate', name: 'Plate');
   }
 }
 
@@ -45,5 +49,9 @@ String equipmentLabel(EquipmentType type) {
       return 'Pull-up Bar';
     case EquipmentType.mat:
       return 'Mat';
+    case EquipmentType.medicineBall:
+      return 'Medicine Ball';
+    case EquipmentType.plate:
+      return 'Plate';
   }
 }

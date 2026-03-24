@@ -1,17 +1,18 @@
 PODS:
+  - camera_avfoundation (0.0.1):
+    - Flutter
   - Firebase/Auth (12.8.0):
     - Firebase/CoreOnly
     - FirebaseAuth (~> 12.8.0)
   - Firebase/CoreOnly (12.8.0):
     - FirebaseCore (~> 12.8.0)
   - firebase_auth (6.1.4):
-    - Firebase/Auth (~> 12.8.0)
-    - Firebase/CoreOnly (~> 12.8.0)
+    - Firebase/Auth (= 12.8.0)
     - firebase_core
-    - FlutterMacOS
+    - Flutter
   - firebase_core (4.4.0):
-    - Firebase/CoreOnly (~> 12.8.0)
-    - FlutterMacOS
+    - Firebase/CoreOnly (= 12.8.0)
+    - Flutter
   - FirebaseAppCheckInterop (12.8.0)
   - FirebaseAuth (12.8.0):
     - FirebaseAppCheckInterop (~> 12.8.0)
@@ -31,7 +32,7 @@ PODS:
     - FirebaseCore (~> 12.8.0)
   - FirebaseCoreInternal (12.8.0):
     - "GoogleUtilities/NSData+zlib (~> 8.1)"
-  - FlutterMacOS (1.0.0)
+  - Flutter (1.0.0)
   - GoogleUtilities/AppDelegateSwizzler (8.1.0):
     - GoogleUtilities/Environment
     - GoogleUtilities/Logger
@@ -54,18 +55,40 @@ PODS:
     - GoogleUtilities/Logger
     - GoogleUtilities/Privacy
   - GTMSessionFetcher/Core (5.0.0)
+  - RecaptchaInterop (101.0.0)
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
+  - TensorFlowLiteC (2.12.0):
+    - TensorFlowLiteC/Core (= 2.12.0)
+  - TensorFlowLiteC/Core (2.12.0)
+  - TensorFlowLiteC/CoreML (2.12.0):
+    - TensorFlowLiteC/Core
+  - TensorFlowLiteC/Metal (2.12.0):
+    - TensorFlowLiteC/Core
+  - TensorFlowLiteSwift (2.12.0):
+    - TensorFlowLiteSwift/Core (= 2.12.0)
+  - TensorFlowLiteSwift/Core (2.12.0):
+    - TensorFlowLiteC (= 2.12.0)
+  - TensorFlowLiteSwift/CoreML (2.12.0):
+    - TensorFlowLiteC/CoreML (= 2.12.0)
+    - TensorFlowLiteSwift/Core (= 2.12.0)
+  - TensorFlowLiteSwift/Metal (2.12.0):
+    - TensorFlowLiteC/Metal (= 2.12.0)
+    - TensorFlowLiteSwift/Core (= 2.12.0)
   - tflite_flutter (0.0.1):
-    - FlutterMacOS
+    - Flutter
+    - TensorFlowLiteSwift (= 2.12.0)
+    - TensorFlowLiteSwift/CoreML (= 2.12.0)
+    - TensorFlowLiteSwift/Metal (= 2.12.0)
 
 DEPENDENCIES:
-  - firebase_auth (from `Flutter/ephemeral/.symlinks/plugins/firebase_auth/macos`)
-  - firebase_core (from `Flutter/ephemeral/.symlinks/plugins/firebase_core/macos`)
-  - FlutterMacOS (from `Flutter/ephemeral`)
-  - shared_preferences_foundation (from `Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin`)
-  - tflite_flutter (from `Flutter/ephemeral/.symlinks/plugins/tflite_flutter/macos`)
+  - camera_avfoundation (from `.symlinks/plugins/camera_avfoundation/ios`)
+  - firebase_auth (from `.symlinks/plugins/firebase_auth/ios`)
+  - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
+  - Flutter (from `Flutter`)
+  - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
+  - tflite_flutter (from `.symlinks/plugins/tflite_flutter/ios`)
 
 SPEC REPOS:
   trunk:
@@ -78,35 +101,44 @@ SPEC REPOS:
     - FirebaseCoreInternal
     - GoogleUtilities
     - GTMSessionFetcher
+    - RecaptchaInterop
+    - TensorFlowLiteC
+    - TensorFlowLiteSwift
 
 EXTERNAL SOURCES:
+  camera_avfoundation:
+    :path: ".symlinks/plugins/camera_avfoundation/ios"
   firebase_auth:
-    :path: Flutter/ephemeral/.symlinks/plugins/firebase_auth/macos
+    :path: ".symlinks/plugins/firebase_auth/ios"
   firebase_core:
-    :path: Flutter/ephemeral/.symlinks/plugins/firebase_core/macos
-  FlutterMacOS:
-    :path: Flutter/ephemeral
+    :path: ".symlinks/plugins/firebase_core/ios"
+  Flutter:
+    :path: Flutter
   shared_preferences_foundation:
-    :path: Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin
+    :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   tflite_flutter:
-    :path: Flutter/ephemeral/.symlinks/plugins/tflite_flutter/macos
+    :path: ".symlinks/plugins/tflite_flutter/ios"
 
 SPEC CHECKSUMS:
+  camera_avfoundation: 5675ca25298b6f81fa0a325188e7df62cc217741
   Firebase: 9a58fdbc9d8655ed7b79a19cf9690bb007d3d46d
-  firebase_auth: 2c2438e41f061c03bd67dcb045dfd7bc843b5f52
-  firebase_core: b1697fb64ff2b9ca16baaa821205f8b0c058e5d2
+  firebase_auth: e9031a1dbe04a90d98e8d11ff2302352a1c6d9e8
+  firebase_core: ee30637e6744af8e0c12a6a1e8a9718506ec2398
   FirebaseAppCheckInterop: ba3dc604a89815379e61ec2365101608d365cf7d
   FirebaseAuth: 4c289b1a43f5955283244a55cf6bd616de344be5
   FirebaseAuthInterop: 95363fe96493cb4f106656666a0768b420cba090
   FirebaseCore: 0dbad74bda10b8fb9ca34ad8f375fb9dd3ebef7c
   FirebaseCoreExtension: 6605938d51f765d8b18bfcafd2085276a252bee2
   FirebaseCoreInternal: fe5fa466aeb314787093a7dce9f0beeaad5a2a21
-  FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
   GTMSessionFetcher: 02d6e866e90bc236f48a703a041dfe43e6221a29
+  RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
   shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
-  tflite_flutter: d1496f2e968aa5a142fb282da8f5d754fcee5613
+  TensorFlowLiteC: 20785a69299185a379ba9852b6625f00afd7984a
+  TensorFlowLiteSwift: 3a4928286e9e35bdd3e17970f48e53c80d25e793
+  tflite_flutter: 64b192e11352fe36943ab6656e1d49207f1a5595
 
-PODFILE CHECKSUM: 54d867c82ac51cbd61b565781b9fada492027009
+PODFILE CHECKSUM: f8480edd1001214b0746776598f697f1c017469e
 
 COCOAPODS: 1.16.2

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../providers/theme_provider.dart';
 
 class LoginPage extends StatefulWidget {
@@ -12,15 +13,46 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _isLoading = false;
   bool _obscure = true;
 
   Future<void> _handleLogin() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in all fields')),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-    Navigator.of(context).pushReplacementNamed('/home');
+
+    try {
+      await _auth.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/home');
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login error: ${e.message}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -57,7 +89,8 @@ class _LoginPageState extends State<LoginPage> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: isDark
-                        ? const Color(0xFFF3EBD3) // subtle contrast on dark mode
+                        ? const Color(
+                            0xFFF3EBD3) // subtle contrast on dark mode
                         : const Color(0xFFF3EBD3), // matches ivory background
                   ),
                   child: Padding(
@@ -94,8 +127,8 @@ class _LoginPageState extends State<LoginPage> {
                     hintStyle: TextStyle(color: subTextColor),
                     filled: true,
                     fillColor: cardColor,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide:
@@ -103,8 +136,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide:
-                          BorderSide(color: accentColor, width: 1.8),
+                      borderSide: BorderSide(color: accentColor, width: 1.8),
                     ),
                   ),
                 ),
@@ -120,8 +152,8 @@ class _LoginPageState extends State<LoginPage> {
                     hintStyle: TextStyle(color: subTextColor),
                     filled: true,
                     fillColor: cardColor,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide:
@@ -129,16 +161,14 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide:
-                          BorderSide(color: accentColor, width: 1.8),
+                      borderSide: BorderSide(color: accentColor, width: 1.8),
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscure ? Icons.visibility_off : Icons.visibility,
                         color: subTextColor,
                       ),
-                      onPressed: () =>
-                          setState(() => _obscure = !_obscure),
+                      onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
                 ),
@@ -183,8 +213,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 // ---------- Register Link ----------
                 TextButton(
-                  onPressed: () =>
-                      Navigator.pushNamed(context, '/register'),
+                  onPressed: () => Navigator.pushNamed(context, '/register'),
                   child: Text(
                     'or Register',
                     style: TextStyle(
@@ -207,8 +236,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     Padding(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 8.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
                       child: Text(
                         'or',
                         style: TextStyle(color: subTextColor),
@@ -229,16 +257,14 @@ class _LoginPageState extends State<LoginPage> {
                   width: double.infinity,
                   height: 52,
                   child: OutlinedButton.icon(
-                    icon:
-                        Image.asset('assets/images/google.png', height: 20),
+                    icon: Image.asset('assets/images/google.png', height: 20),
                     label: Text(
                       'Continue with Google',
                       style: TextStyle(color: textColor),
                     ),
                     onPressed: () {},
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(
-                          color: subTextColor.withOpacity(0.4)),
+                      side: BorderSide(color: subTextColor.withOpacity(0.4)),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -253,16 +279,14 @@ class _LoginPageState extends State<LoginPage> {
                   width: double.infinity,
                   height: 52,
                   child: OutlinedButton.icon(
-                    icon:
-                        Image.asset('assets/images/apple.png', height: 20),
+                    icon: Image.asset('assets/images/apple.png', height: 20),
                     label: Text(
                       'Continue with Apple',
                       style: TextStyle(color: textColor),
                     ),
                     onPressed: () {},
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(
-                          color: subTextColor.withOpacity(0.4)),
+                      side: BorderSide(color: subTextColor.withOpacity(0.4)),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),

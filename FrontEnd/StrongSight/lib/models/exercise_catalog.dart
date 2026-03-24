@@ -9,7 +9,28 @@ enum EquipmentType {
   bench,
   pullupBar,
   mat,
+  medicineBall,
+  plate,
 }
+
+// ------------ Muscle types ----------------
+enum Muscle {
+  chest,
+  lats,
+  rhomboids,
+  quadriceps,
+  hamstrings,
+  glutes,
+  calves,
+  biceps,
+  triceps,
+  deltoids,
+  core,
+  obliques,
+  hipFlexors,
+  forearms,
+}
+
 
 // ------------ Exercise Definition ----------------
 
@@ -17,7 +38,7 @@ class ExerciseDefinition {
   final String id;
   final String name;
   final String image;
-  final List<String> muscles;
+  final List<Muscle> muscles;
   final List<EquipmentType> equipment;
   final List<String> formCues;
 
@@ -31,16 +52,15 @@ class ExerciseDefinition {
   });
 }
 
-
 // ------------ Exercise Catalog ----------------
 
 const List<ExerciseDefinition> exerciseCatalog = [
 
   ExerciseDefinition(
-    id: 'squat',
+    id: 'squats',
     name: 'Squat',
     image: 'assets/images/Squat.png',
-    muscles: ['Quadriceps', 'Glutes', 'Hamstrings', 'Core'],
+    muscles: [Muscle.quadriceps, Muscle.glutes, Muscle.hamstrings, Muscle.core],
     equipment: [EquipmentType.barbell, EquipmentType.bodyweight, EquipmentType.dumbbell, EquipmentType.kettlebell, EquipmentType.machine],
     formCues: [
       'Stand with feet shoulder-width apart and toes slightly pointed out.',
@@ -54,8 +74,8 @@ const List<ExerciseDefinition> exerciseCatalog = [
     id: 'bench_press',
     name: 'Bench Press',
     image: 'assets/images/BenchPress.png',
-    muscles: ['Chest', 'Shoulders', 'Triceps'],
-    equipment: [EquipmentType.barbell],
+    muscles: [Muscle.chest, Muscle.triceps, Muscle.deltoids],
+    equipment: [EquipmentType.barbell, EquipmentType.dumbbell, EquipmentType.machine],
     formCues: [
       'Lie flat on a bench with your feet planted on the floor.',
       'Grip the bar slightly wider than shoulder width.',
@@ -65,26 +85,27 @@ const List<ExerciseDefinition> exerciseCatalog = [
   ),
 
   ExerciseDefinition(
-    id: 'deadlift',
+    id: 'deadlifts',
     name: 'Deadlift',
     image: 'assets/images/Deadlift.png',
-    muscles: ['Hamstrings', 'Glutes', 'Back', 'Core', 'Forearms'],
-    equipment: [EquipmentType.barbell],
+    muscles: [Muscle.hamstrings, Muscle.glutes, Muscle.lats, Muscle.core, Muscle.quadriceps],
+    equipment: [EquipmentType.barbell, EquipmentType.dumbbell],
     formCues: [
       'Stand with feet hip-width apart and barbell over mid-foot.',
       'Bend at the hips and knees, keeping your back straight.',
       'Grip the bar just outside your knees.',
       'Drive through your heels, extending hips and knees to lift the bar.',
+      'Keep the bar close to your body throughout the lift without rounding your lower back.',
       'Lower under control by hinging at the hips.',
     ],
   ),
 
   ExerciseDefinition(
-    id: 'bicep_curl',
+    id: 'bicep_curls',
     name: 'Bicep Curl',
     image: 'assets/images/BicepCurl.png',
-    muscles: ['Biceps', 'Forearms'],
-    equipment: [EquipmentType.dumbbell],
+    muscles: [Muscle.biceps, Muscle.forearms],
+    equipment: [EquipmentType.dumbbell, EquipmentType.barbell, EquipmentType.cable, EquipmentType.machine],
     formCues: [
       'Stand tall with arms fully extended and elbows close to torso.',
       'Curl the weight upward while contracting your biceps.',
@@ -94,11 +115,11 @@ const List<ExerciseDefinition> exerciseCatalog = [
   ),
 
   ExerciseDefinition(
-    id: 'lat_pulldown',
+    id: 'lat_pulldowns',
     name: 'Lat Pulldown',
     image: 'assets/images/LatPulldown.png',
-    muscles: ['Lats', 'Biceps', 'Rear Delts'],
-    equipment: [EquipmentType.cable],
+    muscles: [Muscle.lats, Muscle.biceps, Muscle.rhomboids],
+    equipment: [EquipmentType.cable, EquipmentType.machine],
     formCues: [
       'Sit down at a lat pulldown station and grab the bar with a wide overhand grip.',
       'Keep your chest tall and engage your core.',
@@ -108,10 +129,10 @@ const List<ExerciseDefinition> exerciseCatalog = [
   ),
 
   ExerciseDefinition(
-    id: 'pull_up',
+    id: 'pull_ups',
     name: 'Pull-up',
     image: 'assets/images/PullUp.png',
-    muscles: ['Lats', 'Biceps', 'Forearms', 'Core'],
+    muscles: [Muscle.lats, Muscle.biceps, Muscle.forearms, Muscle.core],
     equipment: [EquipmentType.pullupBar],
     formCues: [
       'Grab the pull-up bar with an overhand grip slightly wider than shoulder width.',
@@ -122,10 +143,10 @@ const List<ExerciseDefinition> exerciseCatalog = [
   ),
 
   ExerciseDefinition(
-    id: 'push_up',
+    id: 'push_ups',
     name: 'Push-up',
     image: 'assets/images/PushUp.png',
-    muscles: ['Chest', 'Shoulders', 'Triceps', 'Core'],
+    muscles: [Muscle.chest, Muscle.triceps, Muscle.deltoids, Muscle.core],
     equipment: [EquipmentType.bodyweight],
     formCues: [
       'Place your hands slightly wider than shoulder-width.',
@@ -136,11 +157,11 @@ const List<ExerciseDefinition> exerciseCatalog = [
   ),
 
   ExerciseDefinition(
-    id: 'sit_up',
+    id: 'sit_ups',
     name: 'Sit-up',
     image: 'assets/images/SitUp.png',
-    muscles: ['Abdominals', 'Hip Flexors'],
-    equipment: [EquipmentType.mat],
+    muscles: [Muscle.core, Muscle.hipFlexors],
+    equipment: [EquipmentType.bodyweight],
     formCues: [
       'Lie flat with knees bent and feet anchored.',
       'Engage your core to lift your upper body.',
@@ -149,11 +170,11 @@ const List<ExerciseDefinition> exerciseCatalog = [
   ),
 
   ExerciseDefinition(
-    id: 'shoulder_press_db',
+    id: 'shoulder_press',
     name: 'Dumbbell Shoulder Press',
     image: 'assets/images/ShoulderPress.png',
-    muscles: ['Deltoids', 'Triceps', 'Upper Chest'],
-    equipment: [EquipmentType.dumbbell],
+    muscles: [Muscle.deltoids, Muscle.triceps, Muscle.chest],
+    equipment: [EquipmentType.dumbbell, EquipmentType.barbell, EquipmentType.machine],
     formCues: [
       'Hold dumbbells at shoulder height.',
       'Press the weights overhead until arms are fully extended.',
@@ -162,11 +183,11 @@ const List<ExerciseDefinition> exerciseCatalog = [
   ),
 
   ExerciseDefinition(
-    id: 'plank',
+    id: 'planks',
     name: 'Plank',
     image: 'assets/images/Plank.png',
-    muscles: ['Core', 'Shoulders', 'Back', 'Glutes'],
-    equipment: [EquipmentType.mat],
+    muscles: [Muscle.core, Muscle.deltoids, Muscle.glutes],
+    equipment: [EquipmentType.bodyweight],
     formCues: [
       'Rest on forearms in a straight line.',
       'Engage abs and glutes.',
@@ -178,8 +199,8 @@ const List<ExerciseDefinition> exerciseCatalog = [
     id: 'lunges',
     name: 'Lunges',
     image: 'assets/images/Lunges.png',
-    muscles: ['Glutes', 'Quads', 'Hamstrings'],
-    equipment: [EquipmentType.bodyweight],
+    muscles: [Muscle.quadriceps, Muscle.glutes, Muscle.hamstrings, Muscle.core],
+    equipment: [EquipmentType.bodyweight, EquipmentType.dumbbell, EquipmentType.barbell, EquipmentType.kettlebell],
     formCues: [
       'Step forward and lower until both knees are at 90°.',
       'Push through front heel to return to standing.',
@@ -191,8 +212,8 @@ const List<ExerciseDefinition> exerciseCatalog = [
     id: 'tricep_dips',
     name: 'Tricep Dips',
     image: 'assets/images/TricepDip.png',
-    muscles: ['Triceps', 'Chest', 'Shoulders'],
-    equipment: [EquipmentType.bench],
+    muscles: [Muscle.triceps, Muscle.chest, Muscle.deltoids],
+    equipment: [EquipmentType.bench, EquipmentType.machine],
     formCues: [
       'Lower body by bending elbows.',
       'Press back up keeping chest lifted.',
@@ -200,10 +221,10 @@ const List<ExerciseDefinition> exerciseCatalog = [
   ),
 
   ExerciseDefinition(
-    id: 'seated_cable_row',
+    id: 'seated_cable_rows',
     name: 'Seated Cable Row',
     image: 'assets/images/SeatedRow.png',
-    muscles: ['Lats', 'Rhomboids', 'Biceps'],
+    muscles: [Muscle.lats, Muscle.rhomboids, Muscle.biceps],
     equipment: [EquipmentType.cable],
     formCues: [
       'Pull handle toward torso.',
@@ -216,7 +237,7 @@ const List<ExerciseDefinition> exerciseCatalog = [
     id: 'leg_press',
     name: 'Leg Press',
     image: 'assets/images/LegPress.png',
-    muscles: ['Quads', 'Glutes', 'Hamstrings'],
+    muscles: [Muscle.quadriceps, Muscle.glutes, Muscle.hamstrings],
     equipment: [EquipmentType.machine],
     formCues: [
       'Lower platform until knees reach 90°.',
@@ -228,8 +249,8 @@ const List<ExerciseDefinition> exerciseCatalog = [
     id: 'calf_raises',
     name: 'Calf Raises',
     image: 'assets/images/CalfRaise.png',
-    muscles: ['Calves'],
-    equipment: [EquipmentType.bodyweight],
+    muscles: [Muscle.calves],
+    equipment: [EquipmentType.bodyweight, EquipmentType.machine, EquipmentType.dumbbell],
     formCues: [
       'Raise heels as high as possible.',
       'Lower heels for full stretch.',
@@ -240,8 +261,8 @@ const List<ExerciseDefinition> exerciseCatalog = [
     id: 'russian_twists',
     name: 'Russian Twists',
     image: 'assets/images/RussianTwist.png',
-    muscles: ['Obliques', 'Core'],
-    equipment: [EquipmentType.bodyweight],
+    muscles: [Muscle.obliques, Muscle.core],
+    equipment: [EquipmentType.bodyweight, EquipmentType.medicineBall, EquipmentType.kettlebell, EquipmentType.plate],
     formCues: [
       'Twist torso side to side.',
       'Engage obliques.',
@@ -252,7 +273,7 @@ const List<ExerciseDefinition> exerciseCatalog = [
     id: 'burpees',
     name: 'Burpees',
     image: 'assets/images/Burpees.png',
-    muscles: ['Chest', 'Legs', 'Core', 'Shoulders'],
+    muscles: [Muscle.quadriceps, Muscle.glutes, Muscle.hamstrings, Muscle.chest, Muscle.deltoids, Muscle.core, Muscle.triceps, Muscle.biceps],
     equipment: [EquipmentType.bodyweight],
     formCues: [
       'Squat down and place hands on floor.',
@@ -265,7 +286,7 @@ const List<ExerciseDefinition> exerciseCatalog = [
     id: 'kettlebell_swings',
     name: 'Kettlebell Swings',
     image: 'assets/images/KettlebellSwing.png',
-    muscles: ['Glutes', 'Hamstrings', 'Core', 'Shoulders'],
+    muscles: [Muscle.hamstrings, Muscle.glutes, Muscle.core, Muscle.lats],
     equipment: [EquipmentType.kettlebell],
     formCues: [
       'Hinge at hips.',
@@ -278,11 +299,54 @@ const List<ExerciseDefinition> exerciseCatalog = [
     id: 'mountain_climbers',
     name: 'Mountain Climbers',
     image: 'assets/images/MountainClimber.png',
-    muscles: ['Core', 'Shoulders', 'Hip Flexors'],
+    muscles: [Muscle.core, Muscle.deltoids, Muscle.quadriceps, Muscle.glutes],
     equipment: [EquipmentType.bodyweight],
     formCues: [
       'Drive knees toward chest alternately.',
       'Keep back straight.',
     ],
   ),
+
+  ExerciseDefinition(
+    id: 'barbell_row',
+    name: 'Barbell Row',
+    image: 'assets/images/BarbellRow.png',
+    muscles: [
+      Muscle.lats,
+      Muscle.rhomboids,
+      Muscle.biceps,
+      Muscle.forearms,
+      Muscle.core,
+    ],
+    equipment: [EquipmentType.barbell],
+    formCues: [
+      'Hinge at the hips with a slight bend in the knees.',
+      'Keep your back flat and chest slightly lifted.',
+      'Pull the bar toward your lower ribcage.',
+      'Squeeze shoulder blades together at the top.',
+      'Lower the bar under control without rounding your back.',
+    ],
+  ),
+
+  ExerciseDefinition(
+    id: 'overhead_press',
+    name: 'Overhead Press',
+    image: 'assets/images/OverheadPress.png',
+    muscles: [
+      Muscle.deltoids,
+      Muscle.triceps,
+      Muscle.core,
+      Muscle.chest,
+    ],
+    equipment: [EquipmentType.barbell],
+    formCues: [
+      'Stand with feet shoulder-width apart and core engaged.',
+      'Grip the bar slightly wider than shoulder width.',
+      'Press the bar straight overhead until arms are fully extended.',
+      'Keep ribs down and avoid excessive lower back arching.',
+      'Lower the bar back to shoulder level with control.',
+    ],
+  ),
+
+
 ];
