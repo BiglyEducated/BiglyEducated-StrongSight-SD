@@ -237,10 +237,6 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: Text(
-                        'or',
-                        style: TextStyle(color: subTextColor),
-                      ),
                     ),
                     Expanded(
                       child: Divider(
@@ -252,49 +248,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 12),
 
-                // ---------- Google Login ----------
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: OutlinedButton.icon(
-                    icon: Image.asset('assets/images/google.png', height: 20),
-                    label: Text(
-                      'Continue with Google',
-                      style: TextStyle(color: textColor),
-                    ),
-                    onPressed: () {},
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: subTextColor.withOpacity(0.4)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      backgroundColor: cardColor,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // ---------- Apple Login ----------
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: OutlinedButton.icon(
-                    icon: Image.asset('assets/images/apple.png', height: 20),
-                    label: Text(
-                      'Continue with Apple',
-                      style: TextStyle(color: textColor),
-                    ),
-                    onPressed: () {},
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: subTextColor.withOpacity(0.4)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      backgroundColor: cardColor,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
 
                 // ---------- Terms ----------
                 Text(

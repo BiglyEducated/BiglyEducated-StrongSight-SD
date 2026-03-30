@@ -359,12 +359,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         const SizedBox(height: 10),
                         _buildSettingsCard(themeProvider, cardColor, textColor,
                             accentColor, subTextColor),
-                        const SizedBox(height: 24),
-                        _buildSectionTitle(
-                            "Progress & Improvements", textColor),
-                        const SizedBox(height: 10),
-                        _buildProgressSection(
-                            cardColor, textColor, accentColor, subTextColor),
                         const SizedBox(height: 40),
                       ],
                     ),
@@ -479,15 +473,6 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- Notifications ---
-            SwitchListTile(
-              activeColor: accentColor,
-              title:
-                  Text("Notifications", style: TextStyle(color: subTextColor)),
-              value: _notificationsEnabled,
-              onChanged: (val) => setState(() => _notificationsEnabled = val),
-            ),
-            Divider(color: Colors.grey.withOpacity(0.3), height: 0),
 
             // --- App Sounds ---
             SwitchListTile(
@@ -1094,65 +1079,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // ---------- PROGRESS ----------
-  Widget _buildProgressSection(
-      Color cardColor, Color textColor, Color accentColor, Color subTextColor) {
-    return Container(
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _ProgressBar(
-            label: "Bench Press",
-            current: 205,
-            goal: 225,
-            color: textColor, //Progress bars fill color
-            subTextColor: subTextColor,
-            textColor: subTextColor, //Color for "Bench Press"
-          ),
-          const SizedBox(height: 14),
-          _ProgressBar(
-            label: "Squat",
-            current: 275,
-            goal: 315,
-            color: textColor,
-            subTextColor: subTextColor,
-            textColor: subTextColor,
-          ),
-          const SizedBox(height: 14),
-          _ProgressBar(
-            label: "Deadlift",
-            current: 315,
-            goal: 365,
-            color: textColor,
-            subTextColor: subTextColor,
-            textColor: subTextColor,
-          ),
-          const SizedBox(height: 14),
-          _ProgressBar(
-            label: "Body Fat % Reduction",
-            current: 18,
-            goal: 12,
-            color: textColor,
-            isPercentage: true,
-            subTextColor: subTextColor,
-            textColor: subTextColor,
-          ),
-        ],
-      ),
-    );
-  }
+
 }
 
 // ---------- INFO TILE ----------
@@ -1187,60 +1114,4 @@ class _InfoTile extends StatelessWidget {
   }
 }
 
-// ---------- PROGRESS BAR ----------
-class _ProgressBar extends StatelessWidget {
-  final String label;
-  final double current;
-  final double goal;
-  final Color color;
-  final bool isPercentage;
-  final Color subTextColor;
-  final Color textColor;
 
-  const _ProgressBar({
-    required this.label,
-    required this.current,
-    required this.goal,
-    required this.color,
-    required this.textColor,
-    required this.subTextColor,
-    this.isPercentage = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    double progress = current / goal;
-    if (isPercentage) progress = (goal - current).abs() / goal;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: textColor,
-          ),
-        ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: LinearProgressIndicator(
-            value: progress.clamp(0, 1),
-            minHeight: 10,
-            color: color,
-            backgroundColor: const Color(0xFFDAD7CD),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          isPercentage
-              ? "${(progress * 100).toStringAsFixed(1)}% complete"
-              : "${current.toInt()} / ${goal.toInt()} lbs",
-          style: TextStyle(fontSize: 13, color: subTextColor),
-        ),
-      ],
-    );
-  }
-}
