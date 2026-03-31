@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
-import 'camera_workout_page.dart';  
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import '../models/exercise_catalog.dart';
 
 class WorkoutPage extends StatefulWidget {
   const WorkoutPage({super.key});
@@ -21,6 +22,8 @@ class _WorkoutPageState extends State<WorkoutPage> {
     "Barbell Row",
     "Overhead Press",
     "Deadlift",
+    "Overhead Press",
+    "Barbell Row",
   ];
 
   void _startRecording() async {
@@ -54,12 +57,15 @@ class _WorkoutPageState extends State<WorkoutPage> {
         _scrollController.animateTo(
           0,
           duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
+          curve: Curves.ease
         );
       }
     });
   }
 
+  ExerciseDefinition _getExercise(String name) {
+  return exerciseCatalog.firstWhere((e) => e.name == name);
+}
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -194,73 +200,92 @@ class _WorkoutPageState extends State<WorkoutPage> {
 
   // ---------- Exercise Demo Card ----------
   Widget _buildExerciseDemo(
-    String exercise,
-    bool isDark,
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-    Color borderColor,
-  ) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          if (!isDark)
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            exercise,
-            style: TextStyle(
-              color: textColor,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
+  String exercise,
+  bool isDark,
+  Color cardColor,
+  Color textColor,
+  Color subTextColor,
+  Color borderColor,
+) {
+  final exerciseData = _getExercise(exercise);
+
+  String? videoId;
+
+  if (exerciseData.videoURL != null) {
+    videoId =
+        YoutubePlayer.convertUrlToId(exerciseData.videoURL!);
+  }
+
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: cardColor,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        if (!isDark)
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
-          const SizedBox(height: 12),
-          Container(
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          exercise,
+          style: TextStyle(
+            color: textColor,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // 🎥 VIDEO SECTION
+        ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
             height: 200,
             width: double.infinity,
-            decoration: BoxDecoration(
-              color: isDark
-                  ? const Color(0xFF1B1A18)
-                  : const Color(0xFF748067).withOpacity(0.15),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: borderColor, width: 1.5),
-            ),
-            child: Center(
-              child: Text(
-                "🎥 Video Demonstration Here (Coming Soon)",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: subTextColor,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
+            color: isDark
+                ? const Color(0xFF1B1A18)
+                : const Color(0xFF748067).withOpacity(0.15),
+
+            child: videoId != null
+                ? YoutubePlayer(
+                    controller: YoutubePlayerController(
+                      initialVideoId: videoId,
+                      flags: const YoutubePlayerFlags(
+                        autoPlay: false,
+                        mute: false,
+                      ),
+                    ),
+                    showVideoProgressIndicator: true,
+                  )
+                : Center(
+                    child: Text(
+                      "No demo video available",
+                      style: TextStyle(color: subTextColor),
+                    ),
+                  ),
           ),
-          const SizedBox(height: 10),
-          Text(
-            "Watch how to perform the ${exercise.toLowerCase()} with proper form before starting.",
-            style: TextStyle(
-              fontSize: 14,
-              color: subTextColor,
-              height: 1.4,
-            ),
+        ),
+
+        const SizedBox(height: 10),
+
+        Text(
+          "Watch how to perform the ${exercise.toLowerCase()} with proper form before starting.",
+          style: TextStyle(
+            fontSize: 14,
+            color: subTextColor,
+            height: 1.4,
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 }

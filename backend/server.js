@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";  // Add this
 import admin from "firebase-admin";
 import { readFileSync } from "fs";
 import authRoutes from "./routes/authRoutes.js";
@@ -7,7 +8,10 @@ import cors from "cors";
 
 const serviceAccount = JSON.parse(readFileSync("./serviceAccountKey.json", "utf8"));
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
+
+// Enable CORS for all origins (development)
+app.use(cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
