@@ -14,8 +14,6 @@ class RepCounter {
   bool _isInitialized = false;
 
   // Timing
-  static const double _minEccentricSeconds = 0.4;
-  static const double _minConcentricSeconds = 0.3;
   DateTime? _descentStartTime;
   DateTime? _bottomReachedTime;
 
@@ -102,9 +100,9 @@ class RepCounter {
         _totalEccentricDurationSeconds += lastEccentricDurationSeconds!;
         _eccentricSamples++;
 
-        if (lastEccentricDurationSeconds! < _minEccentricSeconds) {
+        if (lastEccentricDurationSeconds! < config.minEccentricSeconds) {
           isError = true;
-          timingWarningMessage = "⚠️ TOO FAST - Lower with control!";
+          timingWarningMessage = config.fastEccentricCue;
         }
       }
       _bottomReachedTime = now;
@@ -122,9 +120,9 @@ class RepCounter {
         _totalConcentricDurationSeconds += lastConcentricDurationSeconds!;
         _concentricSamples++;
 
-        if (lastConcentricDurationSeconds! < _minConcentricSeconds) {
+        if (lastConcentricDurationSeconds! < config.minConcentricSeconds) {
           isError = true;
-          timingWarningMessage = "⚠️ TOO FAST - Avoid bouncing out of the bottom!";
+          timingWarningMessage = config.fastConcentricCue;
         }
         feedbackMessage = config.repCompleteCue;
       } else {

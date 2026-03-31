@@ -3,11 +3,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:camera/camera.dart';
+import 'package:provider/provider.dart';
 
 import '../services/pose_detector_service.dart';
 import '../services/camera_service.dart';
 import '../services/camera_utils.dart';
 import '../services/rep_sound_service.dart';
+import '../providers/theme_provider.dart';
 
 import 'widgets/pose_overlay_painter.dart';
 import 'widgets/workout_stats_overlay.dart';
@@ -319,7 +321,7 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -434,7 +436,6 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
                           ),
                           rotation: getImageRotation(_cameraService.controller!),
                           isBackCamera: _cameraService.isBackCamera,
-                          screenSize: screenSize,
                         ),
                         size: Size.infinite,
                       ),
@@ -474,17 +475,20 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
 
                     // Stats Overlay
                     if (!_countdownActive)
-                    Positioned(
-                      top: 20,
-                      left: 20,
-                      right: 20,
-                      child: WorkoutStatsOverlay(
-                        repCount: _repCount,
-                        feedback: _feedback,
-                        phase: _currentPhase,
-                        hasError: _hasFormError,
+                      Positioned(
+                        top: 12,
+                        left: 16,
+                        right: 16,
+                        child: SafeArea(
+                          bottom: false,
+                          child: WorkoutStatsOverlay(
+                            repCount: _repCount,
+                            feedback: _feedback,
+                            phase: _currentPhase,
+                            hasError: _hasFormError,
+                          ),
+                        ),
                       ),
-                    ),
 
                     // Finish Button
                     Positioned(
@@ -493,6 +497,7 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
                       right: 20,
                       child: FinishWorkoutButton(
                         onPressed: _finishWorkout,
+                        isDarkMode: isDark,
                       ),
                     ),
                   ],

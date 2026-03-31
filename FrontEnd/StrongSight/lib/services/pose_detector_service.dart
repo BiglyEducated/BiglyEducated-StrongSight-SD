@@ -54,6 +54,7 @@ class PoseDetectorService {
     if (normalizedName.contains('deadlift')) return 'deadlift';
     if (normalizedName.contains('row')) return 'row';
     if (normalizedName.contains('overhead')) return 'overhead';
+    if (normalizedName.contains('shoulder')) return 'overhead';
     if (normalizedName.contains('bicep')) return 'bicep curls';
     return normalizedName;
   }

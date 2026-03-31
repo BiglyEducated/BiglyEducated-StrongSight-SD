@@ -17,6 +17,10 @@ class ExerciseConfig {
   final String bottomCue;
   final String ascentCue;
   final String repCompleteCue;
+  final double minEccentricSeconds;
+  final double minConcentricSeconds;
+  final String fastEccentricCue;
+  final String fastConcentricCue;
 
   ExerciseConfig({
     required this.name,
@@ -33,6 +37,10 @@ class ExerciseConfig {
     this.bottomCue = "Good depth! Now push up.",
     this.ascentCue = "Push through!",
     this.repCompleteCue = "Rep Complete! Next one.",
+    this.minEccentricSeconds = 0.4,
+    this.minConcentricSeconds = 0.3,
+    this.fastEccentricCue = "⚠️ TOO FAST - Lower with control!",
+    this.fastConcentricCue = "⚠️ TOO FAST - Avoid bouncing out of the bottom!",
   });
 }
 
@@ -127,6 +135,9 @@ class ExerciseLibrary {
       bottomCue: "Bar at shoulders! Press up!",
       ascentCue: "Press overhead! Lock it out!",
       repCompleteCue: "Locked overhead! Next rep.",
+      minEccentricSeconds: 0.45,
+      fastEccentricCue: "⚠️ TOO FAST - Lower back to shoulder height with control!",
+      fastConcentricCue: "⚠️ TOO FAST - Press smoothly from shoulder level!",
     ),
     'overhead press': ExerciseConfig(
       name: "Overhead Press",
@@ -142,6 +153,27 @@ class ExerciseLibrary {
       bottomCue: "Bar at shoulders! Press up!",
       ascentCue: "Press overhead! Lock it out!",
       repCompleteCue: "Locked overhead! Next rep.",
+      minEccentricSeconds: 0.45,
+      fastEccentricCue: "⚠️ TOO FAST - Lower back to shoulder height with control!",
+      fastConcentricCue: "⚠️ TOO FAST - Press smoothly from shoulder level!",
+    ),
+    'shoulder press': ExerciseConfig(
+      name: "Overhead Press",
+      vertexJoint: PoseLandmarkType.leftElbow,
+      pointA: PoseLandmarkType.leftShoulder,
+      pointB: PoseLandmarkType.leftWrist,
+      standingThreshold: 160.0,
+      bottomThreshold: 85.0,
+      optimalAngle: "Front",
+      cameraHeight: "Chest Height",
+      readyCue: "Bar at shoulders. Brace your core.",
+      descentCue: "Lower to shoulders with control.",
+      bottomCue: "Bar at shoulders! Press up!",
+      ascentCue: "Press overhead! Lock it out!",
+      repCompleteCue: "Locked overhead! Next rep.",
+      minEccentricSeconds: 0.45,
+      fastEccentricCue: "⚠️ TOO FAST - Lower back to shoulder height with control!",
+      fastConcentricCue: "⚠️ TOO FAST - Press smoothly from shoulder level!",
     ),
     'bicep curls': ExerciseConfig(
       name: "Bicep Curls",

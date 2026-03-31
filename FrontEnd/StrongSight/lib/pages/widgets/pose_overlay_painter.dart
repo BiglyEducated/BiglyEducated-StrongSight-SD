@@ -7,14 +7,12 @@ class PoseOverlayPainter extends CustomPainter {
   final Size imageSize;
   final InputImageRotation rotation;
   final bool isBackCamera;
-  final Size screenSize;
 
   PoseOverlayPainter({
     required this.poses,
     required this.imageSize,
     required this.rotation,
     required this.isBackCamera,
-    required this.screenSize,
   });
 
   @override
@@ -36,26 +34,110 @@ class PoseOverlayPainter extends CustomPainter {
 
     for (final pose in poses) {
       // Draw torso
-      _drawLine(canvas, paint, pose, PoseLandmarkType.leftShoulder, PoseLandmarkType.rightShoulder);
-      _drawLine(canvas, paint, pose, PoseLandmarkType.leftShoulder, PoseLandmarkType.leftHip);
-      _drawLine(canvas, paint, pose, PoseLandmarkType.rightShoulder, PoseLandmarkType.rightHip);
-      _drawLine(canvas, paint, pose, PoseLandmarkType.leftHip, PoseLandmarkType.rightHip);
+      _drawLine(
+        canvas,
+        paint,
+        pose,
+        PoseLandmarkType.leftShoulder,
+        PoseLandmarkType.rightShoulder,
+        size,
+      );
+      _drawLine(
+        canvas,
+        paint,
+        pose,
+        PoseLandmarkType.leftShoulder,
+        PoseLandmarkType.leftHip,
+        size,
+      );
+      _drawLine(
+        canvas,
+        paint,
+        pose,
+        PoseLandmarkType.rightShoulder,
+        PoseLandmarkType.rightHip,
+        size,
+      );
+      _drawLine(
+        canvas,
+        paint,
+        pose,
+        PoseLandmarkType.leftHip,
+        PoseLandmarkType.rightHip,
+        size,
+      );
       
       // Draw arms
-      _drawLine(canvas, paint, pose, PoseLandmarkType.leftShoulder, PoseLandmarkType.leftElbow);
-      _drawLine(canvas, paint, pose, PoseLandmarkType.leftElbow, PoseLandmarkType.leftWrist);
-      _drawLine(canvas, paint, pose, PoseLandmarkType.rightShoulder, PoseLandmarkType.rightElbow);
-      _drawLine(canvas, paint, pose, PoseLandmarkType.rightElbow, PoseLandmarkType.rightWrist);
+      _drawLine(
+        canvas,
+        paint,
+        pose,
+        PoseLandmarkType.leftShoulder,
+        PoseLandmarkType.leftElbow,
+        size,
+      );
+      _drawLine(
+        canvas,
+        paint,
+        pose,
+        PoseLandmarkType.leftElbow,
+        PoseLandmarkType.leftWrist,
+        size,
+      );
+      _drawLine(
+        canvas,
+        paint,
+        pose,
+        PoseLandmarkType.rightShoulder,
+        PoseLandmarkType.rightElbow,
+        size,
+      );
+      _drawLine(
+        canvas,
+        paint,
+        pose,
+        PoseLandmarkType.rightElbow,
+        PoseLandmarkType.rightWrist,
+        size,
+      );
       
       // Draw legs (highlighted for squat tracking)
-      _drawLine(canvas, legPaint, pose, PoseLandmarkType.leftHip, PoseLandmarkType.leftKnee);
-      _drawLine(canvas, legPaint, pose, PoseLandmarkType.leftKnee, PoseLandmarkType.leftAnkle);
-      _drawLine(canvas, legPaint, pose, PoseLandmarkType.rightHip, PoseLandmarkType.rightKnee);
-      _drawLine(canvas, legPaint, pose, PoseLandmarkType.rightKnee, PoseLandmarkType.rightAnkle);
+      _drawLine(
+        canvas,
+        legPaint,
+        pose,
+        PoseLandmarkType.leftHip,
+        PoseLandmarkType.leftKnee,
+        size,
+      );
+      _drawLine(
+        canvas,
+        legPaint,
+        pose,
+        PoseLandmarkType.leftKnee,
+        PoseLandmarkType.leftAnkle,
+        size,
+      );
+      _drawLine(
+        canvas,
+        legPaint,
+        pose,
+        PoseLandmarkType.rightHip,
+        PoseLandmarkType.rightKnee,
+        size,
+      );
+      _drawLine(
+        canvas,
+        legPaint,
+        pose,
+        PoseLandmarkType.rightKnee,
+        PoseLandmarkType.rightAnkle,
+        size,
+      );
       
       // Draw joint points
       for (final landmark in pose.landmarks.values) {
-        final point = _translatePoint(landmark.x, landmark.y);
+        final point = _translatePoint(landmark.x, landmark.y, size);
         if (point != null) {
           canvas.drawCircle(point, 4, pointPaint);
         }
@@ -69,13 +151,14 @@ class PoseOverlayPainter extends CustomPainter {
     Pose pose,
     PoseLandmarkType start,
     PoseLandmarkType end,
+    Size canvasSize,
   ) {
     final startLandmark = pose.landmarks[start];
     final endLandmark = pose.landmarks[end];
     
     if (startLandmark != null && endLandmark != null) {
-      final startPoint = _translatePoint(startLandmark.x, startLandmark.y);
-      final endPoint = _translatePoint(endLandmark.x, endLandmark.y);
+      final startPoint = _translatePoint(startLandmark.x, startLandmark.y, canvasSize);
+      final endPoint = _translatePoint(endLandmark.x, endLandmark.y, canvasSize);
       
       if (startPoint != null && endPoint != null) {
         canvas.drawLine(startPoint, endPoint, paint);
@@ -83,24 +166,24 @@ class PoseOverlayPainter extends CustomPainter {
     }
   }
 
-  Offset? _translatePoint(double x, double y) {
+  Offset? _translatePoint(double x, double y, Size canvasSize) {
     // Calculate aspect ratios
     double imageAspectRatio = imageSize.width / imageSize.height;
-    double screenAspectRatio = screenSize.width / screenSize.height;
+    double screenAspectRatio = canvasSize.width / canvasSize.height;
     
     double scaleX, scaleY, offsetX, offsetY;
     
     if (imageAspectRatio > screenAspectRatio) {
       // Image is wider - letterbox on top/bottom
-      scaleX = screenSize.width / imageSize.width;
+      scaleX = canvasSize.width / imageSize.width;
       scaleY = scaleX;
       offsetX = 0;
-      offsetY = (screenSize.height - (imageSize.height * scaleY)) / 2;
+      offsetY = (canvasSize.height - (imageSize.height * scaleY)) / 2;
     } else {
       // Image is taller - letterbox on left/right
-      scaleY = screenSize.height / imageSize.height;
+      scaleY = canvasSize.height / imageSize.height;
       scaleX = scaleY;
-      offsetX = (screenSize.width - (imageSize.width * scaleX)) / 2;
+      offsetX = (canvasSize.width - (imageSize.width * scaleX)) / 2;
       offsetY = 0;
     }
     
