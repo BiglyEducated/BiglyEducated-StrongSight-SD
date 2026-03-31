@@ -85,10 +85,7 @@ class WorkoutStatsOverlay extends StatelessWidget {
   }
 
   Color _getFeedbackColor() {
-    if (hasError || feedback.contains('⚠️') || feedback.contains('CAVE') || 
-        feedback.contains('LEAN') || feedback.contains('UNEVEN') ||
-        feedback.contains('FLARE') || feedback.contains('WRIST') ||
-        feedback.contains('TILT')) {
+    if (hasError || feedback.contains('⚠️')) {
       return Colors.redAccent;
     }
     return Colors.greenAccent;

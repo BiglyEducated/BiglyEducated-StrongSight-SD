@@ -22,15 +22,29 @@ class FormChecker {
   // Bench press checks
   int _elbowFlareFrameCount = 0;
   static const int _elbowFlareThresholdFrames = 3;
-  static const double _elbowFlareRatio = 1.35;
+  static const double _elbowFlareRatio = 1.15; // tightened from 1.35
 
   int _wristStackFrameCount = 0;
   static const int _wristStackThresholdFrames = 3;
-  static const double _wristStackTolerance = 0.25;
+  static const double _wristStackTolerance = 0.15; // tightened from 0.25
 
   int _barTiltFrameCount = 0;
   static const int _barTiltThresholdFrames = 3;
-  static const double _barTiltRatio = 0.15;
+  static const double _barTiltRatio = 0.10; // tightened from 0.15
+
+  // Row checks
+  int _rowTorsoFrameCount = 0;
+  static const int _rowTorsoThresholdFrames = 4;
+
+  int _rowElbowFrameCount = 0;
+  static const int _rowElbowThresholdFrames = 3;
+
+  // Overhead press checks
+  int _overheadLeanFrameCount = 0;
+  static const int _overheadLeanThresholdFrames = 4;
+
+  int _overheadAsymmetryFrameCount = 0;
+  static const int _overheadAsymmetryThresholdFrames = 4;
 
   // Deadlift checks
   int _backRoundingFrameCount = 0;
@@ -64,6 +78,10 @@ class FormChecker {
     _elbowFlareFrameCount = 0;
     _wristStackFrameCount = 0;
     _barTiltFrameCount = 0;
+    _rowTorsoFrameCount = 0;
+    _rowElbowFrameCount = 0;
+    _overheadLeanFrameCount = 0;
+    _overheadAsymmetryFrameCount = 0;
     _backRoundingFrameCount = 0;
     _deadliftAsymmetryFrameCount = 0;
     _lastErrorMessage = null;
@@ -221,6 +239,19 @@ class FormChecker {
 
   // BENCH PRESS CHECKS
 
+  /// Returns true if the user appears to be lying down (bench position).
+  /// Guards bench checks from triggering during OHP.
+  bool _isLyingDown(Pose pose) {
+    final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
+    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
+    if (leftShoulder == null || leftHip == null || rightShoulder == null) return false;
+    final torsoVertical = (leftShoulder.y - leftHip.y).abs();
+    final shoulderWidth = AngleCalculator.calculateHorizontalDistance(leftShoulder, rightShoulder);
+    // When lying flat, torso height < shoulder width
+    return torsoVertical < shoulderWidth * 1.0;
+  }
+
   /// Check for excessive elbow flare using elbow-width vs shoulder-width ratio.
   FormCheckResult checkElbowFlare(Pose pose, ExerciseState currentState) {
     final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
@@ -232,6 +263,12 @@ class FormChecker {
         leftElbow == null || rightElbow == null ||
         leftElbow.likelihood < _minConfidence ||
         rightElbow.likelihood < _minConfidence) {
+      _elbowFlareFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    // Only fire when user is lying down — prevents OHP from triggering bench checks
+    if (!_isLyingDown(pose)) {
       _elbowFlareFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
@@ -289,6 +326,12 @@ class FormChecker {
       return FormCheckResult(hasError: false);
     }
 
+    // Only fire when user is lying down — prevents OHP from triggering bench checks
+    if (!_isLyingDown(pose)) {
+      _wristStackFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
     final isRelevantPhase = currentState == ExerciseState.descent ||
         currentState == ExerciseState.ascending;
     if (!isRelevantPhase) {
@@ -339,9 +382,13 @@ class FormChecker {
       return FormCheckResult(hasError: false);
     }
 
-    final isRelevantPhase = currentState == ExerciseState.ascending ||
-        currentState == ExerciseState.bottom;
-    if (!isRelevantPhase) {
+    // Only fire when user is lying down — prevents OHP from triggering bench checks
+    if (!_isLyingDown(pose)) {
+      _barTiltFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    if (currentState == ExerciseState.standing) {
       _barTiltFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
@@ -369,6 +416,170 @@ class FormChecker {
         errorType: FormErrorType.barTilt,
         severity: FormErrorSeverity.warning,
       );
+    }
+    return FormCheckResult(hasError: false);
+  }
+
+  // ROW CHECKS
+
+  /// Check that the torso is sufficiently hinged forward for a row.
+  FormCheckResult checkRowTorsoAngle(Pose pose, ExerciseState currentState) {
+    final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
+    final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
+
+    if (leftShoulder == null || leftHip == null || leftKnee == null ||
+        leftShoulder.likelihood < _confidenceHigh ||
+        leftHip.likelihood < _confidenceHigh) {
+      _rowTorsoFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    // Only check during active movement phases
+    if (currentState == ExerciseState.standing) {
+      _rowTorsoFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    final torsoAngle = AngleCalculator.calculateAngle(leftShoulder, leftHip, leftKnee);
+
+    // Proper row: torso hinged forward. > 110° = too upright.
+    if (torsoAngle > 110.0) {
+      _rowTorsoFrameCount++;
+      if (_rowTorsoFrameCount >= _rowTorsoThresholdFrames) {
+        return FormCheckResult(
+          hasError: true,
+          errorMessage: "⚠️ HINGE MORE - Lean torso forward!",
+          errorType: FormErrorType.forwardLean,
+          severity: FormErrorSeverity.warning,
+        );
+      }
+    } else {
+      _rowTorsoFrameCount = 0;
+    }
+    return FormCheckResult(hasError: false);
+  }
+
+  /// Check that elbows drive back past the torso at the top of the row.
+  FormCheckResult checkRowElbowDrive(Pose pose, ExerciseState currentState) {
+    final leftElbow = pose.landmarks[PoseLandmarkType.leftElbow];
+    final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
+
+    if (leftElbow == null || leftShoulder == null || rightShoulder == null ||
+        leftElbow.likelihood < _confidenceMed ||
+        leftShoulder.likelihood < _confidenceHigh) {
+      _rowElbowFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    if (currentState != ExerciseState.bottom) {
+      _rowElbowFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    final shoulderElbowOffset = (leftElbow.x - leftShoulder.x).abs();
+    final shoulderWidth = AngleCalculator.calculateHorizontalDistance(leftShoulder, rightShoulder);
+
+    if (shoulderElbowOffset < shoulderWidth * 0.10) {
+      _rowElbowFrameCount++;
+      if (_rowElbowFrameCount >= _rowElbowThresholdFrames) {
+        return FormCheckResult(
+          hasError: true,
+          errorMessage: "⚠️ PULL MORE - Drive elbows behind torso!",
+          errorType: FormErrorType.asymmetry,
+          severity: FormErrorSeverity.warning,
+        );
+      }
+    } else {
+      _rowElbowFrameCount = 0;
+    }
+    return FormCheckResult(hasError: false);
+  }
+
+  // OVERHEAD PRESS CHECKS
+
+  /// Check for excessive back lean during overhead press.
+  FormCheckResult checkOverheadLean(Pose pose, ExerciseState currentState) {
+    final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
+    final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
+
+    if (leftShoulder == null || leftHip == null || leftKnee == null ||
+        leftShoulder.likelihood < _confidenceHigh ||
+        leftHip.likelihood < _confidenceHigh) {
+      _overheadLeanFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    if (currentState == ExerciseState.standing) {
+      _overheadLeanFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    // Spine angle shoulder-hip-knee. Back lean = angle < 155°
+    final spineAngle = AngleCalculator.calculateAngle(leftShoulder, leftHip, leftKnee);
+    if (spineAngle < 155.0) {
+      _overheadLeanFrameCount++;
+      if (_overheadLeanFrameCount >= _overheadLeanThresholdFrames) {
+        return FormCheckResult(
+          hasError: true,
+          errorMessage: "⚠️ BACK LEAN - Keep torso upright!",
+          errorType: FormErrorType.forwardLean,
+          severity: FormErrorSeverity.warning,
+        );
+      }
+    } else {
+      _overheadLeanFrameCount = 0;
+    }
+    return FormCheckResult(hasError: false);
+  }
+
+  /// Check for asymmetric pressing by comparing wrist and shoulder Y positions.
+  /// If one wrist is significantly higher than the other, the press is uneven.
+  FormCheckResult checkOverheadAsymmetry(Pose pose, ExerciseState currentState) {
+    final leftWrist = pose.landmarks[PoseLandmarkType.leftWrist];
+    final rightWrist = pose.landmarks[PoseLandmarkType.rightWrist];
+    final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
+
+    if (leftWrist == null || rightWrist == null ||
+        leftShoulder == null || rightShoulder == null ||
+        leftWrist.likelihood < _minConfidence ||
+        rightWrist.likelihood < _minConfidence) {
+      _overheadAsymmetryFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    if (currentState == ExerciseState.standing) {
+      _overheadAsymmetryFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    // Use shoulder width as a normalizing reference
+    final shoulderWidth = AngleCalculator.calculateHorizontalDistance(leftShoulder, rightShoulder);
+    if (shoulderWidth <= 0) {
+      _overheadAsymmetryFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    // If one wrist is significantly higher (lower Y) than the other, press is uneven.
+    final wristYDiff = (leftWrist.y - rightWrist.y).abs();
+    final normalized = wristYDiff / shoulderWidth;
+
+    // > 20% of shoulder width difference = visibly uneven
+    if (normalized > 0.20) {
+      _overheadAsymmetryFrameCount++;
+      if (_overheadAsymmetryFrameCount >= _overheadAsymmetryThresholdFrames) {
+        return FormCheckResult(
+          hasError: true,
+          errorMessage: "⚠️ UNEVEN PRESS - Press both arms equally!",
+          errorType: FormErrorType.asymmetry,
+          severity: FormErrorSeverity.warning,
+        );
+      }
+    } else {
+      _overheadAsymmetryFrameCount = 0;
     }
     return FormCheckResult(hasError: false);
   }
@@ -500,6 +711,18 @@ class FormChecker {
     final barTiltResult = checkBarTilt(pose, currentState);
 
     return _persistError(_prioritizeError([elbowFlareResult, wristStackResult, barTiltResult]));
+  }
+
+  FormCheckResult checkAllRowForm(Pose pose, ExerciseState currentState) {
+    final torsoResult = checkRowTorsoAngle(pose, currentState);
+    final elbowResult = checkRowElbowDrive(pose, currentState);
+    return _persistError(_prioritizeError([torsoResult, elbowResult]));
+  }
+
+  FormCheckResult checkAllOverheadForm(Pose pose, ExerciseState currentState) {
+    final leanResult = checkOverheadLean(pose, currentState);
+    final asymmetryResult = checkOverheadAsymmetry(pose, currentState);
+    return _persistError(_prioritizeError([leanResult, asymmetryResult]));
   }
 
   FormCheckResult checkAllDeadliftForm(Pose pose, ExerciseState currentState) {

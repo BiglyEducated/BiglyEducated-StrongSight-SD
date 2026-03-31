@@ -1,4 +1,5 @@
 // lib/pages/camera_workout_page.dart
+// BUILD_MARKER: v1
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:camera/camera.dart';
@@ -28,6 +29,8 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
 
   bool _isDetecting = false;
   bool _isProcessing = false;
+  bool _countdownActive = true;
+  int _countdownValue = 5;
 
   int _repCount = 0;
   String _feedback = 'Position yourself in frame';
@@ -88,6 +91,9 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
       print('CameraWorkoutPage: Waiting 500ms before starting stream...');
       await Future.delayed(const Duration(milliseconds: 500));
 
+      print('CameraWorkoutPage: Starting countdown...');
+      await _startCountdown();
+
       print('CameraWorkoutPage: Starting image stream...');
       _cameraService.startImageStream(_processCameraImage);
       print('CameraWorkoutPage: Initialization complete!');
@@ -101,6 +107,21 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
         });
       }
     }
+  }
+
+  Future<void> _startCountdown() async {
+    for (int i = 5; i >= 1; i--) {
+      if (!mounted) return;
+      setState(() {
+        _countdownValue = i;
+        _countdownActive = true;
+      });
+      await Future.delayed(const Duration(seconds: 1));
+    }
+    if (!mounted) return;
+    setState(() {
+      _countdownActive = false;
+    });
   }
 
   Future<void> _switchCamera() async {
@@ -126,7 +147,11 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
         feedback.contains('UNEVEN') ||
         feedback.contains('FLARE') ||
         feedback.contains('WRIST') ||
-        feedback.contains('TILT');
+        feedback.contains('TILT') ||
+        feedback.contains('HINGE') ||
+        feedback.contains('PULL MORE') ||
+        feedback.contains('ROUNDING') ||
+        feedback.contains('PRESS');
   }
 
   void _maybePlaySounds({
@@ -160,10 +185,16 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
     final normalized = feedback.toUpperCase();
     if (normalized.contains('KNEE CAVE')) return 'Knee cave';
     if (normalized.contains('FORWARD LEAN')) return 'Forward lean';
+    if (normalized.contains('HINGE MORE')) return 'Torso not hinged enough';
+    if (normalized.contains('BACK LEAN')) return 'Excessive back lean';
+    if (normalized.contains('BACK ROUNDING')) return 'Back rounding';
+    if (normalized.contains('UNEVEN HIPS')) return 'Uneven hips';
+    if (normalized.contains('UNEVEN PRESS')) return 'Uneven press';
     if (normalized.contains('UNEVEN')) return 'Uneven movement';
     if (normalized.contains('ELBOW FLARE')) return 'Elbow flare';
     if (normalized.contains('WRIST STACK')) return 'Wrist stacking';
     if (normalized.contains('BAR TILT')) return 'Bar tilt / uneven press';
+    if (normalized.contains('PULL MORE')) return 'Incomplete row pull';
     if (normalized.contains('LOWER THE WEIGHT MORE CONTROLLED')) {
       return 'Eccentric too fast';
     }
@@ -214,6 +245,8 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
   }
 
   Future<void> _processCameraImage(CameraImage image) async {
+    // Block processing during countdown
+    if (_countdownActive) return;
     // Frame skipping for performance
     _frameSkipCounter++;
     if (_frameSkipCounter % _frameSkipRate != 0) return;
@@ -292,10 +325,19 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: Text(
-          widget.exerciseName,
-          style: const TextStyle(color: Colors.white),
+        title: Column(
+          children: [
+            Text(
+              widget.exerciseName,
+              style: const TextStyle(color: Colors.white),
+            ),
+            const Text(
+              'build: 2026-03-29 v2',
+              style: TextStyle(color: Colors.white54, fontSize: 11),
+            ),
+          ],
         ),
+        centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           if (_cameraService.cameras.length > 1)
@@ -397,7 +439,41 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
                         size: Size.infinite,
                       ),
 
+                    // Countdown Overlay
+                    if (_countdownActive)
+                      Center(
+                        child: Container(
+                          width: 140,
+                          height: 140,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.75),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                '$_countdownValue',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 72,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const Text(
+                                'Get ready',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
                     // Stats Overlay
+                    if (!_countdownActive)
                     Positioned(
                       top: 20,
                       left: 20,

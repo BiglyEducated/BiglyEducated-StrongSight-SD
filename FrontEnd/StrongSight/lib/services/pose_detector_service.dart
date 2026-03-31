@@ -40,7 +40,6 @@ class PoseDetectorService {
     final configKey = _resolveExerciseKey(normalizedName);
     final config = ExerciseLibrary.configs[configKey];
     if (config != null) {
-      print('Found: ${config.name}');
       _repCounter = RepCounter(config);
       _formChecker.reset();
       _currentExerciseKey = configKey;
@@ -49,14 +48,13 @@ class PoseDetectorService {
   }
 
   String _resolveExerciseKey(String normalizedName) {
-    if (ExerciseLibrary.configs.containsKey(normalizedName)) {
-      return normalizedName;
-    }
+    // Always resolve to the canonical single-word key used in the switch statement
     if (normalizedName.contains('bench')) return 'bench';
     if (normalizedName.contains('squat')) return 'squat';
     if (normalizedName.contains('deadlift')) return 'deadlift';
     if (normalizedName.contains('row')) return 'row';
     if (normalizedName.contains('overhead')) return 'overhead';
+    if (normalizedName.contains('bicep')) return 'bicep curls';
     return normalizedName;
   }
 
@@ -86,7 +84,6 @@ class PoseDetectorService {
     final pose = _smoothPose(rawPose);
 
     if (_repCounter == null || _currentExerciseKey == null) {
-      print('ERROR: repCounter=${_repCounter == null}, exercise=$_currentExerciseKey');
       return PoseAnalysisResult.invalid('No exercise selected');
     }
 
@@ -111,6 +108,10 @@ class PoseDetectorService {
         formCheck = _formChecker.checkAllBenchForm(pose, _repCounter!.currentState);
       case 'deadlift':
         formCheck = _formChecker.checkAllDeadliftForm(pose, _repCounter!.currentState);
+      case 'row':
+        formCheck = _formChecker.checkAllRowForm(pose, _repCounter!.currentState);
+      case 'overhead':
+        formCheck = _formChecker.checkAllOverheadForm(pose, _repCounter!.currentState);
       default:
         formCheck = FormCheckResult(hasError: false);
     }
