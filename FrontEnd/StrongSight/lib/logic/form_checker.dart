@@ -46,6 +46,16 @@ class FormChecker {
   int _overheadAsymmetryFrameCount = 0;
   static const int _overheadAsymmetryThresholdFrames = 4;
 
+  int _overheadWristStackFrameCount = 0;
+  static const int _overheadWristStackThresholdFrames = 3;
+  static const double _overheadWristStackTolerance = 0.26;
+
+  int _overheadLegDriveFrameCount = 0;
+  static const int _overheadLegDriveThresholdFrames = 2;
+  static const double _overheadLegDriveDipAngle = 175.0;
+  static const double _overheadLegDriveRecoveryAngle = 172.0;
+  bool _overheadLegDriveDipSeen = false;
+
   // Deadlift checks
   int _backRoundingFrameCount = 0;
   static const int _backRoundingThresholdFrames = 4;
@@ -54,12 +64,6 @@ class FormChecker {
   int _deadliftAsymmetryFrameCount = 0;
   static const int _deadliftAsymmetryThresholdFrames = 4;
   static const double _deadliftAsymmetryAngleDiff = 15.0;
-
-  // Error persistence
-  String? _lastErrorMessage;
-  FormErrorType? _lastErrorType;
-  int _errorDisplayFrames = 0;
-  static const int _errorPersistFrames = 15;
 
   // Per-joint confidence thresholds
   static const double _confidenceHigh = 0.75;
@@ -82,11 +86,11 @@ class FormChecker {
     _rowElbowFrameCount = 0;
     _overheadLeanFrameCount = 0;
     _overheadAsymmetryFrameCount = 0;
+    _overheadWristStackFrameCount = 0;
+    _overheadLegDriveFrameCount = 0;
+    _overheadLegDriveDipSeen = false;
     _backRoundingFrameCount = 0;
     _deadliftAsymmetryFrameCount = 0;
-    _lastErrorMessage = null;
-    _lastErrorType = null;
-    _errorDisplayFrames = 0;
   }
 
   // SQUAT CHECKS
@@ -584,6 +588,118 @@ class FormChecker {
     return FormCheckResult(hasError: false);
   }
 
+  /// Check that forearms stay mostly vertical during an overhead press.
+  FormCheckResult checkOverheadWristStack(Pose pose, ExerciseState currentState) {
+    final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
+    final leftElbow = pose.landmarks[PoseLandmarkType.leftElbow];
+    final rightElbow = pose.landmarks[PoseLandmarkType.rightElbow];
+    final leftWrist = pose.landmarks[PoseLandmarkType.leftWrist];
+    final rightWrist = pose.landmarks[PoseLandmarkType.rightWrist];
+
+    if (leftShoulder == null || rightShoulder == null ||
+        leftElbow == null || rightElbow == null ||
+        leftWrist == null || rightWrist == null ||
+        leftElbow.likelihood < _minConfidence ||
+        rightElbow.likelihood < _minConfidence ||
+        leftWrist.likelihood < _minConfidence ||
+        rightWrist.likelihood < _minConfidence) {
+      _overheadWristStackFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    final isRelevantPhase = currentState == ExerciseState.descent ||
+        currentState == ExerciseState.bottom ||
+        currentState == ExerciseState.ascending;
+    if (!isRelevantPhase) {
+      _overheadWristStackFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    final shoulderWidth =
+        AngleCalculator.calculateHorizontalDistance(leftShoulder, rightShoulder);
+    if (shoulderWidth <= 0) {
+      _overheadWristStackFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    final leftOffset = (leftWrist.x - leftElbow.x).abs();
+    final rightOffset = (rightWrist.x - rightElbow.x).abs();
+    final avgOffset = (leftOffset + rightOffset) / 2;
+
+    if (avgOffset > shoulderWidth * _overheadWristStackTolerance) {
+      _overheadWristStackFrameCount++;
+    } else {
+      _overheadWristStackFrameCount = 0;
+    }
+
+    if (_overheadWristStackFrameCount >= _overheadWristStackThresholdFrames) {
+      return FormCheckResult(
+        hasError: true,
+        errorMessage: "⚠️ POOR WRIST STACKING - Keep forearms more vertical!",
+        errorType: FormErrorType.wristStack,
+        severity: FormErrorSeverity.warning,
+      );
+    }
+
+    return FormCheckResult(hasError: false);
+  }
+
+  /// Check for push-press style knee dip and re-extension during a strict press.
+  FormCheckResult checkOverheadLegDrive(Pose pose, ExerciseState currentState) {
+    final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
+    final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
+    final leftAnkle = pose.landmarks[PoseLandmarkType.leftAnkle];
+    final rightHip = pose.landmarks[PoseLandmarkType.rightHip];
+    final rightKnee = pose.landmarks[PoseLandmarkType.rightKnee];
+    final rightAnkle = pose.landmarks[PoseLandmarkType.rightAnkle];
+
+    if (leftHip == null || leftKnee == null || leftAnkle == null ||
+        rightHip == null || rightKnee == null || rightAnkle == null ||
+        leftKnee.likelihood < _confidenceMed || rightKnee.likelihood < _confidenceMed ||
+        leftHip.likelihood < _confidenceMed || rightHip.likelihood < _confidenceMed) {
+      _overheadLegDriveFrameCount = 0;
+      _overheadLegDriveDipSeen = false;
+      return FormCheckResult(hasError: false);
+    }
+
+    final leftKneeAngle = AngleCalculator.calculateAngle(leftHip, leftKnee, leftAnkle);
+    final rightKneeAngle = AngleCalculator.calculateAngle(rightHip, rightKnee, rightAnkle);
+    final averageKneeAngle = (leftKneeAngle + rightKneeAngle) / 2;
+
+    if (currentState == ExerciseState.descent ||
+        currentState == ExerciseState.bottom ||
+        currentState == ExerciseState.ascending) {
+      if (averageKneeAngle < _overheadLegDriveDipAngle) {
+        _overheadLegDriveDipSeen = true;
+        _overheadLegDriveFrameCount = 0;
+        return FormCheckResult(hasError: false);
+      }
+    }
+
+    if (_overheadLegDriveDipSeen &&
+        (currentState == ExerciseState.ascending || currentState == ExerciseState.standing) &&
+        averageKneeAngle > _overheadLegDriveRecoveryAngle) {
+      _overheadLegDriveFrameCount++;
+      if (_overheadLegDriveFrameCount >= _overheadLegDriveThresholdFrames) {
+        _overheadLegDriveDipSeen = false;
+        _overheadLegDriveFrameCount = 0;
+        return FormCheckResult(
+          hasError: true,
+          errorMessage: "⚠️ LEG DRIVE - Keep it strict. Try not to use your legs.",
+          errorType: FormErrorType.legDrive,
+          severity: FormErrorSeverity.warning,
+        );
+      }
+    } else if (currentState == ExerciseState.standing && !_overheadLegDriveDipSeen) {
+      _overheadLegDriveFrameCount = 0;
+    } else if (averageKneeAngle <= _overheadLegDriveRecoveryAngle) {
+      _overheadLegDriveFrameCount = 0;
+    }
+
+    return FormCheckResult(hasError: false);
+  }
+
   // DEADLIFT CHECKS
 
   FormCheckResult checkBackRounding(Pose pose, ExerciseState currentState) {
@@ -722,7 +838,11 @@ class FormChecker {
   FormCheckResult checkAllOverheadForm(Pose pose, ExerciseState currentState) {
     final leanResult = checkOverheadLean(pose, currentState);
     final asymmetryResult = checkOverheadAsymmetry(pose, currentState);
-    return _persistError(_prioritizeError([leanResult, asymmetryResult]));
+    final wristStackResult = checkOverheadWristStack(pose, currentState);
+    final legDriveResult = checkOverheadLegDrive(pose, currentState);
+    return _persistError(
+      _prioritizeError([legDriveResult, wristStackResult, leanResult, asymmetryResult]),
+    );
   }
 
   FormCheckResult checkAllDeadliftForm(Pose pose, ExerciseState currentState) {
@@ -740,24 +860,7 @@ class FormChecker {
   }
 
   FormCheckResult _persistError(FormCheckResult currentError) {
-    if (currentError.hasError) {
-      _lastErrorMessage = currentError.errorMessage;
-      _lastErrorType = currentError.errorType;
-      _errorDisplayFrames = _errorPersistFrames;
-      return currentError;
-    } else if (_errorDisplayFrames > 0) {
-      _errorDisplayFrames--;
-      return FormCheckResult(
-        hasError: true,
-        errorMessage: _lastErrorMessage,
-        errorType: _lastErrorType,
-        severity: FormErrorSeverity.warning,
-      );
-    } else {
-      _lastErrorMessage = null;
-      _lastErrorType = null;
-      return FormCheckResult(hasError: false);
-    }
+    return currentError;
   }
 }
 
@@ -786,6 +889,7 @@ enum FormErrorType {
   wristStack,
   barTilt,
   backRounding,
+  legDrive,
 }
 
 enum FormErrorSeverity {

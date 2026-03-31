@@ -190,11 +190,12 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
     if (normalized.contains('HINGE MORE')) return 'Torso not hinged enough';
     if (normalized.contains('BACK LEAN')) return 'Excessive back lean';
     if (normalized.contains('BACK ROUNDING')) return 'Back rounding';
+    if (normalized.contains('LEG DRIVE')) return 'Leg drive';
     if (normalized.contains('UNEVEN HIPS')) return 'Uneven hips';
     if (normalized.contains('UNEVEN PRESS')) return 'Uneven press';
     if (normalized.contains('UNEVEN')) return 'Uneven movement';
     if (normalized.contains('ELBOW FLARE')) return 'Elbow flare';
-    if (normalized.contains('WRIST STACK')) return 'Wrist stacking';
+    if (normalized.contains('WRIST STACK')) return 'Poor wrist stacking';
     if (normalized.contains('BAR TILT')) return 'Bar tilt / uneven press';
     if (normalized.contains('PULL MORE')) return 'Incomplete row pull';
     if (normalized.contains('TOO FAST') || normalized.contains('LOWER WITH CONTROL')) {

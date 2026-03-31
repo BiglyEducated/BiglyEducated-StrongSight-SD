@@ -8,11 +8,15 @@ import '../models/exercise_config.dart';
 import '../models/pose_analysis_result.dart';
 
 class PoseDetectorService {
+  static const Duration _warningDisplayDuration = Duration(seconds: 2);
+
   late PoseDetector _poseDetector;
   RepCounter? _repCounter;
   final FormChecker _formChecker = FormChecker();
   bool _isInitialized = false;
   String? _currentExerciseKey;
+  String? _activeWarningMessage;
+  DateTime? _activeWarningExpiresAt;
 
   // Smoothing - stores exponential moving average of each landmark position
   static const double _smoothingFactor = 0.4;
@@ -117,12 +121,12 @@ class PoseDetectorService {
         formCheck = FormCheckResult(hasError: false);
     }
 
-    final repTimingWarningActive =
-        _repCounter!.isError && _repCounter!.timingWarningMessage != null;
-    final combinedHasFormError = formCheck.hasError || repTimingWarningActive;
-    final combinedFormErrorMessage = formCheck.hasError
+    final currentWarningMessage = formCheck.hasError
         ? formCheck.errorMessage
         : _repCounter!.timingWarningMessage;
+    final activeWarningMessage = _resolveActiveWarning(currentWarningMessage);
+    final combinedHasFormError = activeWarningMessage != null;
+    final combinedFormErrorMessage = activeWarningMessage;
 
     return PoseAnalysisResult.fromAnalysis(
       count: _repCounter!.count,
@@ -133,6 +137,27 @@ class PoseDetectorService {
       hasFormError: combinedHasFormError,
       formErrorMessage: combinedFormErrorMessage,
     );
+  }
+
+  String? _resolveActiveWarning(String? currentWarningMessage) {
+    final now = DateTime.now();
+
+    if (currentWarningMessage != null && currentWarningMessage.isNotEmpty) {
+      _activeWarningMessage = currentWarningMessage;
+      _activeWarningExpiresAt = now.add(_warningDisplayDuration);
+      return _activeWarningMessage;
+    }
+
+    final expiresAt = _activeWarningExpiresAt;
+    if (_activeWarningMessage != null &&
+        expiresAt != null &&
+        now.isBefore(expiresAt)) {
+      return _activeWarningMessage;
+    }
+
+    _activeWarningMessage = null;
+    _activeWarningExpiresAt = null;
+    return null;
   }
 
   /// Convert CameraImage to InputImage for ML Kit
