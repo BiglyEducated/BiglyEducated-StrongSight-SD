@@ -195,10 +195,10 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
     if (normalized.contains('WRIST STACK')) return 'Wrist stacking';
     if (normalized.contains('BAR TILT')) return 'Bar tilt / uneven press';
     if (normalized.contains('PULL MORE')) return 'Incomplete row pull';
-    if (normalized.contains('LOWER THE WEIGHT MORE CONTROLLED')) {
+    if (normalized.contains('TOO FAST') || normalized.contains('LOWER WITH CONTROL')) {
       return 'Eccentric too fast';
     }
-    if (normalized.contains('AVOID BOUNCING OUT OF THE BOTTOM')) {
+    if (normalized.contains('BOUNCING') || normalized.contains('AVOID BOUNCING')) {
       return 'Bounced out of bottom';
     }
     return 'General form breakdown';
