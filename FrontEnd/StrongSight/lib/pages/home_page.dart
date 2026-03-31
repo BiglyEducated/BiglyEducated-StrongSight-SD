@@ -297,10 +297,6 @@ class _HomePageState extends State<HomePage>
                       _buildExpandableWorkoutList(cardColor, primaryTextColor,
                           subTextColor, accentColor),
                       const SizedBox(height: 20),
-                      _buildSectionTitle("Metrics", primaryTextColor),
-                      _buildMetricsRow(cardColor, primaryTextColor,
-                          subTextColor, accentColor),
-                      const SizedBox(height: 20),
                       _buildSectionTitle("Personal Records", primaryTextColor),
                       _buildPRTracker(cardColor, primaryTextColor, subTextColor,
                           accentColor),
@@ -712,53 +708,6 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  // ---------- Metrics ----------
-  Widget _buildMetricsRow(
-      Color cardColor, Color textColor, Color subTextColor, Color accentColor) {
-    final metrics = [
-      //Track the amount of days worked for x amount of months
-      {"title": "Workout Frequency", "value": "87%"},
-      //Take the average of the users workout lenghts for a week at a time
-      {"title": "Duration", "value": "Average: 1hr 30min"},
-      //Maybe prompt the user for their weigth once a week and display the difference
-      {"title": "Weight", "value": "+5lbs"},
-    ];
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: metrics.map((m) {
-        return Expanded(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 6,
-                    offset: const Offset(0, 4))
-              ],
-            ),
-            child: Column(
-              children: [
-                Text(m["title"]!,
-                    style: TextStyle(
-                        fontWeight: FontWeight.w500, color: subTextColor)),
-                const SizedBox(height: 8),
-                Text(m["value"]!,
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: accentColor)),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
 
   // ---------- PR TRACKER ----------
   Widget _buildPRTracker(

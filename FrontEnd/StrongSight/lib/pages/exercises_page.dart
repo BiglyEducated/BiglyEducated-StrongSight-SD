@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
+import '../models/exercise_catalog.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 
 
@@ -14,10 +16,12 @@ class WorkoutSet {
 
 class WorkoutExercise {
   String name;
+  String equipment;
   List<WorkoutSet> sets;
 
   WorkoutExercise({
     required this.name,
+    required this.equipment,
     required this.sets,
   });
 }
@@ -25,10 +29,12 @@ class WorkoutExercise {
 class Workout {
   final String workoutName;
   final List<WorkoutExercise> exercises;
+  final DateTime date;
 
   Workout({
     required this.workoutName,
     required this.exercises,
+    required this.date,
   });
 }
 
@@ -44,11 +50,390 @@ class ExercisesPage extends StatefulWidget {
 class _ExercisesPageState extends State<ExercisesPage> {
   final TextEditingController _searchController = TextEditingController();
   final Set<String> _pinnedExercises = {};
+  final Map<String, String> _selectedEquipment = {};
+  final Set<String> _expandedCards = {};
   String _searchQuery = "";
   Set<String> _selectedMuscles = {};
 
+  // Builds a line chart for PRs or volume
+  Widget _buildPRChart(Map<DateTime, double> data) {
+    final isDark =
+        Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
+
+    final entries = data.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    final spots = List.generate(entries.length, (i) {
+      return FlSpot(i.toDouble(), entries[i].value);
+    });
+
+    final lineColor = isDark
+        ? const Color(0xFF039E39)
+        : const Color(0xFF094941);
+
+    return LineChart(
+      LineChartData(
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: 20,
+          getDrawingHorizontalLine: (value) => FlLine(
+            color: Colors.grey.withOpacity(0.15),
+            strokeWidth: 1,
+          ),
+        ),
+
+        borderData: FlBorderData(
+          show: true,
+          border: Border(
+            bottom: BorderSide(color: lineColor.withOpacity(0.4)),
+            left: BorderSide(color: lineColor.withOpacity(0.4)),
+            right: BorderSide.none,
+            top: BorderSide.none,
+          ),
+        ),
+
+        titlesData: FlTitlesData(
+          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              interval: 1,
+              getTitlesWidget: (value, meta) {
+                final index = value.toInt();
+                if (index >= entries.length) return const SizedBox();
+                final date = entries[index].key;
+                return Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    "${date.month}/${date.day}",
+                    style: const TextStyle(fontSize: 10),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 32,
+            ),
+          ),
+        ),
+
+        lineTouchData: LineTouchData(
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipItems: (touchedSpots) {
+              return touchedSpots.map((spot) {
+                return LineTooltipItem(
+                  "${spot.y.toStringAsFixed(0)} lbs",
+                  const TextStyle(color: Colors.white),
+                );
+              }).toList();
+            },
+          ),
+        ),
+
+        lineBarsData: [
+          LineChartBarData(
+            spots: spots,
+            isCurved: true,
+            barWidth: 3,
+
+            gradient: LinearGradient(
+              colors: [
+                lineColor,
+                lineColor.withOpacity(0.5),
+              ],
+            ),
+
+            belowBarData: BarAreaData(
+              show: true,
+              gradient: LinearGradient(
+                colors: [
+                  lineColor.withOpacity(0.3),
+                  Colors.transparent,
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+
+            dotData: FlDotData(show: true),
+          ),
+        ],
+      ),
+    );
+  }
+
+// Builds a bar chart for volume
+Widget _buildVolumeChart(Map<DateTime, double> data) {
+  final isDark =
+      Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
+
+  final entries = data.entries.toList()
+    ..sort((a, b) => a.key.compareTo(b.key));
+
+  final barColor = isDark
+      ? const Color(0xFF039E39)
+      : const Color(0xFF094941);
+
+  return BarChart(
+    BarChartData(
+      gridData: FlGridData(
+        show: true,
+        drawVerticalLine: false,
+        getDrawingHorizontalLine: (value) => FlLine(
+          color: Colors.grey.withOpacity(0.15),
+          strokeWidth: 1,
+        ),
+      ),
+
+      borderData: FlBorderData(
+        show: true,
+        border: Border(
+          bottom: BorderSide(color: barColor.withOpacity(0.4)),
+          left: BorderSide(color: barColor.withOpacity(0.4)),
+          right: BorderSide.none,
+          top: BorderSide.none,
+        ),
+      ),
+
+      titlesData: FlTitlesData(
+        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+
+        bottomTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            getTitlesWidget: (value, meta) {
+              final index = value.toInt();
+              if (index >= entries.length) return const SizedBox();
+              final date = entries[index].key;
+              return Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  "${date.month}/${date.day}",
+                  style: const TextStyle(fontSize: 10),
+                ),
+              );
+            },
+          ),
+        ),
+
+        leftTitles: AxisTitles(
+          sideTitles: SideTitles(showTitles: true, reservedSize: 32),
+        ),
+      ),
+
+      barTouchData: BarTouchData(
+        touchTooltipData: BarTouchTooltipData(
+          getTooltipItem: (group, groupIndex, rod, rodIndex) {
+            return BarTooltipItem(
+              "${rod.toY.toStringAsFixed(0)}",
+              const TextStyle(color: Colors.white),
+            );
+          },
+        ),
+      ),
+
+      barGroups: List.generate(entries.length, (i) {
+        return BarChartGroupData(
+          x: i,
+          barRods: [
+            BarChartRodData(
+              toY: entries[i].value,
+              width: 14,
+              borderRadius: BorderRadius.circular(6),
+
+              gradient: LinearGradient(
+                colors: [
+                  barColor,
+                  barColor.withOpacity(0.6),
+                ],
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+              ),
+            ),
+          ],
+        );
+      }),
+    ),
+  );
+}
+
+// Builds the metrics section with PR and volume charts
+  Widget _buildMetricsSection(String exerciseName) {
+  //API GOES HERE REPLACE REPLACE YEUUUURRRR
+    final allWorkouts = [
+      Workout(
+        workoutName: "Test",
+        date: DateTime.now().subtract(const Duration(days: 10)),
+        exercises: [
+          WorkoutExercise(
+            name: exerciseName,
+            equipment: "Barbell",
+            sets: [WorkoutSet(reps: 10, weight: 100)],
+          ),
+        ],
+      ),
+      Workout(
+        workoutName: "Test",
+        date: DateTime.now().subtract(const Duration(days: 5)),
+        exercises: [
+          WorkoutExercise(
+            name: exerciseName,
+            equipment: "Dumbbell",
+            sets: [WorkoutSet(reps: 8, weight: 120)],
+          ),
+        ],
+      ),
+    ];
+  final rawOptions = allWorkouts
+    .expand((w) => w.exercises)
+    .where((e) => e.name == exerciseName)
+    .map((e) => e.equipment)
+    .toSet()
+    .toList();
+
+final options = rawOptions.isNotEmpty
+    ? rawOptions
+    : ["Barbell", "Dumbbell", "Machine"];
+
+final selected = _selectedEquipment[exerciseName] ?? options.first;
+
+if (!options.contains(selected)) {
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    setState(() {
+      _selectedEquipment[exerciseName] = options.first;
+    });
+  });
+}
+
+  final filtered = filterWorkoutsByExercise(allWorkouts, exerciseName, selected);
+
+  final lastMonth = filterByRange(filtered, const Duration(days: 30));
+  final last6Months = filterByRange(filtered, const Duration(days: 180));
+
+  final prsMonth = getPRs(lastMonth, exerciseName, selected);
+  final volumeMonth = getVolume(lastMonth, exerciseName, selected);
+
+  // If no data, show placeholder
+  if (prsMonth.isEmpty && volumeMonth.isEmpty) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 12),
+      child: Center(
+        child: Text(
+          "Lift for results",
+          style: TextStyle(fontSize: 16),
+        ),
+      ),
+    );
+  }
+  return Column(
+    children: [
+      DropdownButton<String>(
+        value: selected,
+        items: options.map((e) {
+          return DropdownMenuItem(
+            value: e,
+            child: Text(e),
+          );
+        }).toList(),
+        onChanged: (value) {
+          setState(() {
+            _selectedEquipment[exerciseName] = value!;
+          });
+        },
+      ),
+
+      const SizedBox(height: 8),
+      //Shows PR and Volume charts for the last month and last 6 months
+      const Text("PR (Last Month)"),
+      const SizedBox(height: 8),
+
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF12110F)
+              : Colors.grey[100],
+        ),
+        child: SizedBox(
+          height: 160,
+          child: _buildPRChart(prsMonth),
+        ),
+      ),
+
+      const SizedBox(height: 12),
+
+      const Text("PR (6 Months)"),
+      const SizedBox(height: 8),
+
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF12110F)
+              : Colors.grey[100],
+        ),
+        child: SizedBox(
+          height: 160,
+          child: _buildPRChart(
+            getPRs(last6Months, exerciseName, selected),
+          ),
+        ),
+      ),
+      
+      const SizedBox(height: 12),
+      const Text("Volume (Last Month)"),
+      const SizedBox(height: 8),
+
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF12110F)
+              : Colors.grey[100],
+        ),
+        child: SizedBox(
+          height: 160,
+          child: _buildVolumeChart(volumeMonth),
+        ),
+      ),
+
+      const SizedBox(height: 12),
+
+      const Text("Volume (6 Months)"),
+      const SizedBox(height: 8),
+
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF12110F)
+              : Colors.grey[100],
+        ),
+        child: SizedBox(
+          height: 160,
+          child: _buildVolumeChart(
+            getVolume(last6Months, exerciseName, selected),
+          ),
+        ),
+      ),
+    ],
+  );
+  }
+
   //Exercise Card Builder
-  Widget _buildExerciseCard({
+Widget _buildExerciseCard({
   required String name,
   required String image,
   required String muscles,
@@ -56,17 +441,15 @@ class _ExercisesPageState extends State<ExercisesPage> {
   required List<String> form,
   String? stats,
   bool pinnable = false,
-}) {
+}){
   final isDark =
       Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
-
   final cardColor = isDark ? const Color(0xFF1A1917) : Colors.white;
   final textColor =
       isDark ? const Color(0xFF039E39) : const Color(0xFF094941);
   final subTextColor =
       isDark ? const Color(0xFFD9CBB8) : Colors.grey[700]!;
   final accentColor = textColor;
-
   return Container(
     margin: const EdgeInsets.only(bottom: 18),
     decoration: BoxDecoration(
@@ -164,17 +547,124 @@ class _ExercisesPageState extends State<ExercisesPage> {
             );
           }).toList(),
         ),
+        const SizedBox(height: 12),
+        const Divider(height: 20),
+        ExpansionTile(
+  title: Text(
+    "Metrics",
+    style: TextStyle(
+      fontWeight: FontWeight.w600,
+      color: textColor,
+    ),
+  ),
+  onExpansionChanged: (expanded) {
+    setState(() {
+      if (expanded) {
+        _expandedCards.add(name);
+      } else {
+        _expandedCards.remove(name);
+      }
+    });
+  },
+  children: [
+    if (_expandedCards.contains(name))
+      Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: _buildMetricsSection(name),
+      )
+    else
+      const SizedBox.shrink(),
+  ],
+),
       ],
     ),
   );
 }
 
   // Finds exercise details by name
-  Map<String, dynamic>? _findExerciseDetails(String name) {
-  return _exercises.firstWhere(
-    (ex) => ex["name"] == name,
-    orElse: () => {},
-  );
+  ExerciseDefinition? _findExerciseDetails(String name) {
+  try {
+    return _exercises.firstWhere((ex) => ex.name == name);
+  } catch (e) {
+    return null;
+  }
+}
+
+// Filters workouts to find those containing a specific exercise
+List<Workout> filterWorkoutsByExercise(
+  List<Workout> workouts,
+  String exerciseName,
+  String equipment,
+) {
+  return workouts.where((w) =>
+      w.exercises.any((e) => e.name == exerciseName && e.equipment == equipment)).toList();
+}
+
+// Extracts PRs for a specific exercise across workouts
+Map<DateTime, double> getPRs(
+  List<Workout> workouts,
+  String exerciseName,
+  String equipment,
+) {
+  final Map<DateTime, double> prs = {};
+
+  for (var workout in workouts) {
+    final exercise = workout.exercises.firstWhere(
+      (e) => e.name == exerciseName && e.equipment == equipment,
+      orElse: () => WorkoutExercise(name: '', equipment: '', sets: []),
+    );
+
+    if (exercise.name.isEmpty) continue;
+
+    double maxWeight = 0;
+
+    for (var set in exercise.sets) {
+      if (set.weight > maxWeight) {
+        maxWeight = set.weight.toDouble();
+      }
+    }
+
+    prs[workout.date] = maxWeight;
+  }
+
+  return prs;
+}
+
+
+
+// Calculates total volume (weight x reps) for a specific exercise across workouts
+Map<DateTime, double> getVolume(
+  List<Workout> workouts,
+  String exerciseName,
+  String equipment,
+) {
+  final Map<DateTime, double> volume = {};
+
+  for (var workout in workouts) {
+    final exercise = workout.exercises.firstWhere(
+      (e) => e.name == exerciseName && e.equipment == equipment,
+      orElse: () => WorkoutExercise(name: '', equipment: '', sets: []),
+    );
+
+    if (exercise.name.isEmpty) continue;
+
+    double total = 0;
+
+    for (var set in exercise.sets) {
+      total += set.weight * set.reps;
+    }
+
+    volume[workout.date] = total;
+  }
+
+  return volume;
+}
+
+
+// Filters workouts to a specific date range (e.g., last week, last month)
+List<Workout> filterByRange(List<Workout> workouts, Duration range) {
+  final cutoff = DateTime.now().subtract(range);
+  return workouts.where((w) => w.date.isAfter(cutoff)).toList();
 }
 
 
@@ -194,9 +684,9 @@ void _togglePin(String exerciseName) {
 }
 
 // Get pinned exercise cards
-List<Map<String, dynamic>> get _pinnedExerciseCards {
+List<ExerciseDefinition> get _pinnedExerciseCards {
   return _exercises
-      .where((ex) => _pinnedExercises.contains(ex["name"]))
+      .where((ex) => _pinnedExercises.contains(ex.name))
       .toList();
 }
 
@@ -207,24 +697,28 @@ String _formatSets(List<WorkoutSet> sets) {
 
 
   //Todays workout(REPLACE WITH API DATA)
-  final Workout? todaysWorkout = Workout(
-  workoutName: "Leetcode Session",
-  exercises: [
-    WorkoutExercise(
-      name: "Squat",
-      sets: [
+  final Workout? todaysWorkout = Workout(                                                                         ///REPLACE WITH API DATA
+    date: DateTime.now(),
+    workoutName: "Leetcode Session",
+    exercises: [
+      WorkoutExercise(
+        name: "Squat",
+        equipment: "Barbell",
+        sets: [
         WorkoutSet(reps: 8, weight: 135),
         WorkoutSet(reps: 8, weight: 135),
       ],
     ),
     WorkoutExercise(
       name: "Bench Press",
+      equipment: "Barbell",
       sets: [
         WorkoutSet(reps: 10, weight: 95),
       ],
     ),
     WorkoutExercise(
       name: "Bicep Curls",
+      equipment: "Dumbbell",
       sets: [
         WorkoutSet(reps: 12, weight: 25),
         WorkoutSet(reps: 12, weight: 25),
@@ -233,265 +727,42 @@ String _formatSets(List<WorkoutSet> sets) {
   ],
 );
 
-
   //Exercise Library
 
-  final List<Map<String, dynamic>> _exercises = [
-    {
-      "name": "Squat",
-      "image": "assets/images/Squat.png",
-      "muscles": "Quadriceps, Glutes, Hamstrings, Core",
-      "equipment": "Barbell, Squat Rack (optional)",
-      "form": [
-        "Stand with feet shoulder-width apart and toes slightly pointed out.",
-        "Keep chest up and core tight.",
-        "Lower hips down and back until thighs are parallel to the floor.",
-        "Push through heels to return to the starting position."
-      ]
-    },
-    {
-      "name": "Bench Press",
-      "image": "assets/images/BenchPress.png",
-      "muscles": "Chest, Shoulders, Triceps",
-      "equipment": "Barbell, Flat Bench",
-      "form": [
-        "Lie flat on a bench with your feet planted on the floor.",
-        "Grip the bar slightly wider than shoulder width.",
-        "Lower the bar slowly to mid-chest level.",
-        "Push the bar back up until your arms are fully extended."
-      ]
-    },
-    {
-      "name": "Deadlift",
-      "image": "assets/images/Deadlift.png",
-      "muscles": "Hamstrings, Glutes, Back, Core, Forearms",
-      "equipment": "Barbell, Lifting Belt (optional)",
-      "form": [
-        "Stand with feet hip-width apart and barbell over mid-foot.",
-        "Bend at the hips and knees, keeping your back straight.",
-        "Grip the bar just outside your knees.",
-        "Drive through your heels, extending hips and knees to lift the bar.",
-        "Lower under control by hinging at the hips."
-      ]
-    },
-    {
-      "name": "Bicep Curls",
-      "image": "assets/images/BicepCurl.png",
-      "muscles": "Biceps, Forearms",
-      "equipment": "Dumbbells or Barbell",
-      "form": [
-        "Stand tall with arms fully extended and elbows close to torso.",
-        "Curl the weight upward while contracting your biceps.",
-        "Pause at the top, then slowly lower the weight back down.",
-        "Avoid swinging your body during the motion."
-      ]
-    },
-    {
-    "name": "Lat Pulldowns",
-    "image": "assets/images/LatPulldown.png",
-    "muscles": "Lats, Biceps, Rear Delts",
-    "equipment": "Cable Machine",
-    "form": [
-      "Sit down at a lat pulldown station and grab the bar with a wide overhand grip.",
-      "Keep your chest tall and engage your core.",
-      "Pull the bar down to your upper chest, squeezing your shoulder blades together.",
-      "Pause briefly, then slowly return to the starting position with control."
-    ]
-  },
-  {
-    "name": "Pull-ups",
-    "image": "assets/images/PullUp.png",
-    "muscles": "Lats, Biceps, Forearms, Core",
-    "equipment": "Pull-up Bar",
-    "form": [
-      "Grab the pull-up bar with an overhand grip slightly wider than shoulder width.",
-      "Hang fully extended, then pull yourself upward until your chin clears the bar.",
-      "Pause briefly at the top, then lower yourself down with control.",
-      "Avoid swinging or using momentum to complete the movement."
-    ]
-  },
-  {
-    "name": "Push-ups",
-    "image": "assets/images/PushUp.png",
-    "muscles": "Chest, Shoulders, Triceps, Core",
-    "equipment": "Bodyweight",
-    "form": [
-      "Place your hands slightly wider than shoulder-width on the floor.",
-      "Keep your body straight from head to heels and your core engaged.",
-      "Lower your chest toward the floor until your elbows reach 90 degrees.",
-      "Push back up through your palms to return to the starting position."
-    ]
-  },
-  {
-    "name": "Sit-ups",
-    "image": "assets/images/SitUp.png",
-    "muscles": "Abdominals, Hip Flexors",
-    "equipment": "Bodyweight or Mat",
-    "form": [
-      "Lie flat on your back with knees bent and feet anchored.",
-      "Place your hands behind your head or cross them over your chest.",
-      "Engage your core to lift your upper body toward your knees.",
-      "Lower yourself back down slowly with control."
-    ]
-  },
-  {
-    "name": "Dumbbell Shoulder Press",
-    "image": "assets/images/ShoulderPress.png",
-    "muscles": "Deltoids, Triceps, Upper Chest",
-    "equipment": "Dumbbells or Barbell",
-    "form": [
-      "Sit or stand with a dumbbell in each hand at shoulder height, palms facing forward.",
-      "Engage your core and press the weights overhead until your arms are fully extended.",
-      "Lower the weights slowly back to shoulder height and repeat."
-    ]
-  },
-  {
-    "name": "Plank",
-    "image": "assets/images/Plank.png",
-    "muscles": "Core, Shoulders, Back, Glutes",
-    "equipment": "Bodyweight or Mat",
-    "form": [
-      "Start in a push-up position but rest on your forearms instead of your hands.",
-      "Keep your body in a straight line from head to heels.",
-      "Engage your abs and glutes, holding the position without letting your hips sag.",
-      "Breathe steadily and maintain good form for the duration."
-    ]
-  },
-  {
-    "name": "Lunges",
-    "image": "assets/images/Lunges.png",
-    "muscles": "Glutes, Quads, Hamstrings",
-    "equipment": "Bodyweight or Dumbbells",
-    "form": [
-      "Stand tall with feet hip-width apart and core engaged.",
-      "Step forward with one leg and lower until both knees form 90° angles.",
-      "Push through your front heel to return to standing position.",
-      "Alternate legs and repeat for reps."
-    ]
-  },
-  {
-    "name": "Tricep Dips",
-    "image": "assets/images/TricepDip.png",
-    "muscles": "Triceps, Chest, Shoulders",
-    "equipment": "Parallel Bars or Bench",
-    "form": [
-      "Position your hands shoulder-width apart on parallel bars or a bench behind you.",
-      "Lower your body by bending your elbows until they reach 90°.",
-      "Press back up to the starting position, keeping your chest lifted."
-    ]
-  },
-  {
-    "name": "Seated Cable Row",
-    "image": "assets/images/SeatedRow.png",
-    "muscles": "Lats, Rhomboids, Biceps",
-    "equipment": "Cable Machine",
-    "form": [
-      "Sit at a cable row station with feet braced and a neutral grip handle.",
-      "Keep your back straight and pull the handle toward your torso.",
-      "Squeeze your shoulder blades together, then slowly extend your arms forward."
-    ]
-  },
-  {
-    "name": "Leg Press",
-    "image": "assets/images/LegPress.png",
-    "muscles": "Quads, Glutes, Hamstrings",
-    "equipment": "Leg Press Machine",
-    "form": [
-      "Sit in the leg press machine with your feet shoulder-width apart on the platform.",
-      "Lower the platform toward you until your knees reach a 90° angle.",
-      "Push through your heels to extend your legs without locking your knees."
-    ]
-  },
-  {
-    "name": "Calf Raises",
-    "image": "assets/images/CalfRaise.png",
-    "muscles": "Calves",
-    "equipment": "Bodyweight, Dumbbells, or Machine",
-    "form": [
-      "Stand on the edge of a step with heels hanging off.",
-      "Raise your heels as high as possible while contracting your calves.",
-      "Pause briefly, then lower your heels below the step for a full stretch."
-    ]
-  },
-  {
-    "name": "Russian Twists",
-    "image": "assets/images/RussianTwist.png",
-    "muscles": "Obliques, Core",
-    "equipment": "Bodyweight or Medicine Ball",
-    "form": [
-      "Sit on the floor with knees bent and feet slightly elevated.",
-      "Hold a weight or clasp your hands together.",
-      "Twist your torso to each side, engaging your obliques as you move."
-    ]
-  },
-  {
-    "name": "Burpees",
-    "image": "assets/images/Burpees.png",
-    "muscles": "Full Body (Chest, Legs, Core, Shoulders)",
-    "equipment": "Bodyweight",
-    "form": [
-      "Start standing, then squat down and place your hands on the floor.",
-      "Jump your feet back into a plank position.",
-      "Perform a push-up, then jump your feet forward.",
-      "Explosively jump upward and repeat."
-    ]
-  },
-  {
-    "name": "Kettlebell Swings",
-    "image": "assets/images/KettlebellSwing.png",
-    "muscles": "Glutes, Hamstrings, Core, Shoulders",
-    "equipment": "Kettlebell",
-    "form": [
-      "Stand with feet shoulder-width apart holding a kettlebell with both hands.",
-      "Hinge at your hips and swing the kettlebell back between your legs.",
-      "Drive your hips forward to swing it up to shoulder height.",
-      "Control the swing and let it return between your legs for the next rep."
-    ]
-  },
-  {
-    "name": "Mountain Climbers",
-    "image": "assets/images/MountainClimber.png",
-    "muscles": "Core, Shoulders, Hip Flexors",
-    "equipment": "Bodyweight or Mat",
-    "form": [
-      "Start in a high plank position with hands under shoulders.",
-      "Drive one knee toward your chest, then quickly switch legs.",
-      "Continue alternating at a quick pace, keeping your back straight."
-    ]
-  }
-  ];
+  List<ExerciseDefinition> get _exercises => exerciseCatalog;
+   
 
   //Gets the muscle groups from the exercise list
   List<String> get _muscleGroups {
   final muscles = _exercises
-      .expand((e) => (e["muscles"] as String)
-          .split(",")
-          .map((m) => m.trim()))
+      .expand((e) => e.muscles.map((m) => m.name))
       .toSet()
-      .toList()
-      .cast<String>(); 
+      .toList();
 
   muscles.sort();
   return muscles;
 }
+  
 
   // Filters exercises based on search query and selected muscles
-  List<Map<String, dynamic>> get _filteredExercises {
-    final query = _searchQuery.toLowerCase();
-    return _exercises.where((ex) {
-      final matchesSearch = query.isEmpty ||
-          ex["name"].toLowerCase().contains(query) ||
-          ex["muscles"].toLowerCase().contains(query);
+  List<ExerciseDefinition> get _filteredExercises {
+  final query = _searchQuery.toLowerCase();
 
-      if (_selectedMuscles.isEmpty) return matchesSearch;
+  return _exercises.where((ex) {
+    final matchesSearch =
+        query.isEmpty ||
+        ex.name.toLowerCase().contains(query) ||
+        ex.muscles.map((m) => m.name).join(", ").toLowerCase().contains(query);
 
-      final muscleList =
-          ex["muscles"].toLowerCase().split(",").map((m) => m.trim()).toList();
-      final matchesMuscles = _selectedMuscles.any((m) => muscleList.contains(m.toLowerCase()));
+    if (_selectedMuscles.isEmpty) return matchesSearch;
 
-      return matchesSearch && matchesMuscles;
-    }).toList();
-  }
+    final matchesMuscles = ex.muscles
+        .map((m) => m.name.toLowerCase())
+        .any((m) => _selectedMuscles.contains(m));
+
+    return matchesSearch && matchesMuscles;
+  }).toList();
+}
 
   //--- UI BUILD METHOD ---
   @override
@@ -563,7 +834,7 @@ String _formatSets(List<WorkoutSet> sets) {
                   ),
                   children: todaysWorkout!.exercises.map((planned) {
                     final details = _findExerciseDetails(planned.name);
-                    if (details == null || details.isEmpty) {
+                    if (details == null) {
                       return const SizedBox();
                     }
 
@@ -571,10 +842,10 @@ String _formatSets(List<WorkoutSet> sets) {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: _buildExerciseCard(
               name: planned.name,
-              image: details["image"],
-              muscles: details["muscles"],
-              equipment: details["equipment"],
-              form: List<String>.from(details["form"]),
+              image: details.image,
+              muscles: details.muscles.map((m) => m.name).join(", "),
+              equipment: details.equipment.map((e) => e.name).join(", "),
+              form: List<String>.from(details.formCues),
               stats: _formatSets(planned.sets),
               ),
             );
@@ -631,11 +902,11 @@ String _formatSets(List<WorkoutSet> sets) {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: _buildExerciseCard(
-                  name: ex["name"],
-                  image: ex["image"],
-                  muscles: ex["muscles"],
-                  equipment: ex["equipment"],
-                  form: List<String>.from(ex["form"]),
+                  name: ex.name,
+                  image: ex.image,
+                  muscles: ex.muscles.map((m) => m.name).join(", "),
+                  equipment: ex.equipment.map((e) => e.name).join(", "),
+                  form: List<String>.from(ex.formCues),
                   pinnable: true,
                 ),
               );
@@ -699,11 +970,11 @@ String _formatSets(List<WorkoutSet> sets) {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: _buildExerciseCard(
-                  name: ex["name"],
-                  image: ex["image"],
-                  muscles: ex["muscles"],
-                  equipment: ex["equipment"],
-                  form: List<String>.from(ex["form"]),
+                  name: ex.name,
+                  image: ex.image,
+                  muscles: ex.muscles.map((m) => m.name).join(", "),
+                  equipment: ex.equipment.map((e) => e.name).join(", "),
+                  form: List<String>.from(ex.formCues),
                   pinnable: true,
                 ),
               );
@@ -731,4 +1002,5 @@ String _formatSets(List<WorkoutSet> sets) {
       ),
     );
   }
+
 }

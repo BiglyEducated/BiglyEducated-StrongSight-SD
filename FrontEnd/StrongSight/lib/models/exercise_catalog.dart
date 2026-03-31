@@ -29,6 +29,8 @@ enum Muscle {
   obliques,
   hipFlexors,
   forearms,
+  traps,
+  rearDelts,
 }
 
 
@@ -41,6 +43,7 @@ class ExerciseDefinition {
   final List<Muscle> muscles;
   final List<EquipmentType> equipment;
   final List<String> formCues;
+  final String? videoURL;
 
   const ExerciseDefinition({
     required this.id,
@@ -49,6 +52,7 @@ class ExerciseDefinition {
     required this.muscles,
     required this.equipment,
     required this.formCues,
+    this.videoURL,
   });
 }
 
@@ -68,6 +72,7 @@ const List<ExerciseDefinition> exerciseCatalog = [
       'Lower hips down and back until thighs are parallel to the floor.',
       'Push through heels to return to the starting position.',
     ],
+    videoURL: 'https://youtube.com/shorts/LrOxrC8B5ow?feature=share',
   ),
 
   ExerciseDefinition(
@@ -82,6 +87,7 @@ const List<ExerciseDefinition> exerciseCatalog = [
       'Lower the bar slowly to mid-chest level.',
       'Push the bar back up until your arms are fully extended.',
     ],
+    videoURL: 'https://youtube.com/shorts/zTr0lren2X8?feature=share'
   ),
 
   ExerciseDefinition(
@@ -98,7 +104,50 @@ const List<ExerciseDefinition> exerciseCatalog = [
       'Keep the bar close to your body throughout the lift without rounding your lower back.',
       'Lower under control by hinging at the hips.',
     ],
+    videoURL: 'https://youtube.com/shorts/tNuvaaOQ0FM?feature=share'
   ),
+  ExerciseDefinition(
+    id: 'barbell_row',
+    name: 'Barbell Row',
+    image: 'assets/images/BarbellRow.png',
+    muscles: [
+      Muscle.lats,
+      Muscle.rhomboids,
+      Muscle.biceps,
+      Muscle.forearms,
+      Muscle.core,
+    ],
+    equipment: [EquipmentType.barbell],
+    formCues: [
+      'Hinge at the hips with a slight bend in the knees.',
+      'Keep your back flat and chest slightly lifted.',
+      'Pull the bar toward your lower ribcage.',
+      'Squeeze your shoulder blades together at the top.',
+      'Lower the bar under control without rounding your back.',
+    ],
+    videoURL: 'https://youtube.com/shorts/4tCOdUxaXrk?feature=share'
+  ),
+
+  ExerciseDefinition(
+  id: 'overhead_press',
+  name: 'Overhead Press',
+  image: 'assets/images/OverheadPress.png',
+  muscles: [
+    Muscle.deltoids,
+    Muscle.triceps,
+    Muscle.chest,
+    Muscle.core,
+  ],
+  equipment: [EquipmentType.barbell, EquipmentType.dumbbell],
+  formCues: [
+    'Start with the bar at shoulder height, hands just outside shoulder width.',
+    'Brace your core and keep your glutes tight.',
+    'Press the bar overhead while keeping it close to your face.',
+    'Keep your ribs down and avoid arching your lower back.',
+    'Lock out your arms overhead, then lower the bar with control.',
+  ],
+  videoURL: 'https://youtube.com/shorts/JvwRTyf9r94?feature=share'
+),
 
   ExerciseDefinition(
     id: 'bicep_curls',
@@ -306,47 +355,4 @@ const List<ExerciseDefinition> exerciseCatalog = [
       'Keep back straight.',
     ],
   ),
-
-  ExerciseDefinition(
-    id: 'barbell_row',
-    name: 'Barbell Row',
-    image: 'assets/images/BarbellRow.png',
-    muscles: [
-      Muscle.lats,
-      Muscle.rhomboids,
-      Muscle.biceps,
-      Muscle.forearms,
-      Muscle.core,
-    ],
-    equipment: [EquipmentType.barbell],
-    formCues: [
-      'Hinge at the hips with a slight bend in the knees.',
-      'Keep your back flat and chest slightly lifted.',
-      'Pull the bar toward your lower ribcage.',
-      'Squeeze shoulder blades together at the top.',
-      'Lower the bar under control without rounding your back.',
-    ],
-  ),
-
-  ExerciseDefinition(
-    id: 'overhead_press',
-    name: 'Overhead Press',
-    image: 'assets/images/OverheadPress.png',
-    muscles: [
-      Muscle.deltoids,
-      Muscle.triceps,
-      Muscle.core,
-      Muscle.chest,
-    ],
-    equipment: [EquipmentType.barbell],
-    formCues: [
-      'Stand with feet shoulder-width apart and core engaged.',
-      'Grip the bar slightly wider than shoulder width.',
-      'Press the bar straight overhead until arms are fully extended.',
-      'Keep ribs down and avoid excessive lower back arching.',
-      'Lower the bar back to shoulder level with control.',
-    ],
-  ),
-
-
 ];
