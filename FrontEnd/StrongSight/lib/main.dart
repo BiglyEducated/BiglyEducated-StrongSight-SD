@@ -15,6 +15,7 @@ import 'pages/main_page.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:ui' as ui;
 
+
 Future<void> verifyAssets() async {
   final assets = [
     'assets/images/logo.png',
@@ -41,7 +42,6 @@ void main() async {
   );
   await verifyAssets();
 
-  // 🔹 Wrap your entire app in ChangeNotifierProvider here
   runApp(
     ChangeNotifierProvider(
       create: (_) => ThemeProvider(),

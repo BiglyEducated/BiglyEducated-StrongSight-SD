@@ -19,19 +19,30 @@ class _WorkoutPageState extends State<WorkoutPage> {
   final List<String> _exerciseList = [
     "Squat",
     "Bench Press",
+    "Barbell Row",
+    "Overhead Press",
     "Deadlift",
     "Overhead Press",
     "Barbell Row",
   ];
 
-  void _startRecording() {
-    setState(() {
-      _isRecording = true;
-    });
+  void _startRecording() async {
+    if (_selectedExercise == null) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Camera starting... (placeholder)")),
+    final repsCompleted = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CameraWorkoutPage(
+          exerciseName: _selectedExercise!,
+        ),
+      ),
     );
+
+    if (repsCompleted != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Workout completed! $repsCompleted reps")),
+      );
+    }
   }
 
   @override
