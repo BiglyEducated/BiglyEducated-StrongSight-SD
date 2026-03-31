@@ -159,71 +159,6 @@ class _HomePageState extends State<HomePage>
     return count;
   }
 
-  /// Fetch user display name from backend using verify-token API
-  Future<void> _fetchUserDisplayName() async {
-    try {
-      // Get the current user from Firebase Auth
-      final user = _auth.currentUser;
-      if (user == null) {
-        setState(() {
-          userName = "Guest";
-          _isLoadingUserData = false;
-        });
-        return;
-      }
-
-      // Get the ID token from Firebase Auth
-      final idToken = await user.getIdToken();
-
-      // Call the verify-token endpoint to get user data securely
-      final response = await http.post(
-        Uri.parse('$BASE_URL/api/auth/verify-token'),
-        headers: {
-          'Authorization': 'Bearer $idToken',
-          'Content-Type': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        // Token verified successfully
-        // Now fetch the actual user info
-        final userInfoResponse = await http.get(
-          Uri.parse('$BASE_URL/api/auth/get-userInfo'),
-          headers: {
-            'Authorization': 'Bearer $idToken',
-            'Content-Type': 'application/json',
-          },
-        );
-
-        if (userInfoResponse.statusCode == 200) {
-          final data = jsonDecode(userInfoResponse.body);
-          final displayName = data['data']['displayName'] ?? 'User';
-          setState(() {
-            userName = displayName;
-            _isLoadingUserData = false;
-          });
-        } else {
-          setState(() {
-            userName = "User";
-            _isLoadingUserData = false;
-          });
-        }
-      } else {
-        // Token verification failed
-        setState(() {
-          userName = "User";
-          _isLoadingUserData = false;
-        });
-      }
-    } catch (e) {
-      print('Error fetching user data: $e');
-      setState(() {
-        userName = "User";
-        _isLoadingUserData = false;
-      });
-    }
-  }
-
   @override
   void initState() {
     super.initState();
@@ -301,7 +236,7 @@ class _HomePageState extends State<HomePage>
                   leading: const Icon(Icons.logout, color: Colors.redAccent),
                   title: Text("Log Out", style: TextStyle(color: subTextColor)),
                   onTap: () async {
-                    await _auth.signOut();
+                    await FirebaseAuth.instance.signOut();
                     if (mounted) {
                       Navigator.pushReplacementNamed(context, '/');
                     }
@@ -332,7 +267,7 @@ class _HomePageState extends State<HomePage>
                           Text("Welcome back,",
                               style: TextStyle(
                                   color: green.withOpacity(0.8), fontSize: 16)),
-                          Text(_isLoadingUserData ? "Loading..." : userName,
+                          Text(_isLoadingUserInfo ? "Loading..." : userName,
                               style: const TextStyle(
                                   color: green,
                                   fontSize: 24,
@@ -778,7 +713,6 @@ class _HomePageState extends State<HomePage>
       }),
     );
   }
-
 
   // ---------- PR TRACKER ----------
   Widget _buildPRTracker(

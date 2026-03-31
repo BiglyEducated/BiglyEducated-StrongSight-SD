@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../models/exercise_catalog.dart';
+import 'camera_workout_page.dart';
 
 class WorkoutPage extends StatefulWidget {
   const WorkoutPage({super.key});

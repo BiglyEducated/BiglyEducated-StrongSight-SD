@@ -4,7 +4,6 @@ import admin from "firebase-admin";
 import { readFileSync } from "fs";
 import authRoutes from "./routes/authRoutes.js";
 import { db } from "./config/firebase.js";
-import cors from "cors";
 
 const serviceAccount = JSON.parse(readFileSync("./serviceAccountKey.json", "utf8"));
 const app = express();
