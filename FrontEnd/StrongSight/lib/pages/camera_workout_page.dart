@@ -196,6 +196,7 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
     if (normalized.contains('UNEVEN')) return 'Uneven movement';
     if (normalized.contains('ELBOW FLARE')) return 'Elbow flare';
     if (normalized.contains('WRIST STACK')) return 'Poor wrist stacking';
+    if (normalized.contains('UNEVEN BAR')) return 'Uneven bar';
     if (normalized.contains('BAR TILT')) return 'Bar tilt / uneven press';
     if (normalized.contains('PULL MORE')) return 'Incomplete row pull';
     if (normalized.contains('TOO FAST') || normalized.contains('LOWER WITH CONTROL')) {

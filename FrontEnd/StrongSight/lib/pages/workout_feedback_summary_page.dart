@@ -373,10 +373,26 @@ List<String> _suggestedFeedbackForIssue(String issueTitle) {
       return const [
         'Keep the bar stable from shoulders to lockout.',
       ];
+    case 'Uneven bar':
+      return const [
+        'Keep both sides of the bar moving level.',
+      ];
     case 'Poor wrist stacking':
       return const [
         'Keep your forearms more vertical as you press.',
         'Let the wrists stay stacked over the elbows.',
+      ];
+    case 'Back rounding':
+      return const [
+        'Keep your chest up and spine neutral.',
+      ];
+    case 'Torso not hinged enough':
+      return const [
+        'Stay hinged over the bar through the full rep.',
+      ];
+    case 'Incomplete row pull':
+      return const [
+        'Finish each rep by driving your elbows back.',
       ];
     default:
       return const [];

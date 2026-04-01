@@ -39,6 +39,14 @@ class FormChecker {
   int _rowElbowFrameCount = 0;
   static const int _rowElbowThresholdFrames = 3;
 
+  int _rowBackRoundingFrameCount = 0;
+  static const int _rowBackRoundingThresholdFrames = 3;
+  static const double _rowBackRoundingAngleMin = 150.0;
+
+  int _rowUnevenBarFrameCount = 0;
+  static const int _rowUnevenBarThresholdFrames = 3;
+  static const double _rowUnevenBarRatio = 0.12;
+
   // Overhead press checks
   int _overheadLeanFrameCount = 0;
   static const int _overheadLeanThresholdFrames = 4;
@@ -84,6 +92,8 @@ class FormChecker {
     _barTiltFrameCount = 0;
     _rowTorsoFrameCount = 0;
     _rowElbowFrameCount = 0;
+    _rowBackRoundingFrameCount = 0;
+    _rowUnevenBarFrameCount = 0;
     _overheadLeanFrameCount = 0;
     _overheadAsymmetryFrameCount = 0;
     _overheadWristStackFrameCount = 0;
@@ -501,6 +511,96 @@ class FormChecker {
     return FormCheckResult(hasError: false);
   }
 
+  /// Check that the row hinge stays neutral instead of rounding through the back.
+  FormCheckResult checkRowBackRounding(Pose pose, ExerciseState currentState) {
+    final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
+    final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
+
+    if (leftShoulder == null || leftHip == null || leftKnee == null ||
+        leftShoulder.likelihood < _confidenceHigh ||
+        leftHip.likelihood < _confidenceHigh ||
+        leftKnee.likelihood < _confidenceMed) {
+      _rowBackRoundingFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    final isRelevantPhase = currentState == ExerciseState.descent ||
+        currentState == ExerciseState.bottom ||
+        currentState == ExerciseState.ascending;
+    if (!isRelevantPhase) {
+      _rowBackRoundingFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    final spineAngle = AngleCalculator.calculateAngle(leftShoulder, leftHip, leftKnee);
+    if (spineAngle < _rowBackRoundingAngleMin) {
+      _rowBackRoundingFrameCount++;
+      if (_rowBackRoundingFrameCount >= _rowBackRoundingThresholdFrames) {
+        return FormCheckResult(
+          hasError: true,
+          errorMessage: "⚠️ BACK ROUNDING - Keep spine neutral!",
+          errorType: FormErrorType.backRounding,
+          severity: FormErrorSeverity.warning,
+        );
+      }
+    } else {
+      _rowBackRoundingFrameCount = 0;
+    }
+
+    return FormCheckResult(hasError: false);
+  }
+
+  /// Check if one side of the bar drifts higher than the other during the row.
+  FormCheckResult checkRowUnevenBar(Pose pose, ExerciseState currentState) {
+    final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
+    final leftWrist = pose.landmarks[PoseLandmarkType.leftWrist];
+    final rightWrist = pose.landmarks[PoseLandmarkType.rightWrist];
+
+    if (leftShoulder == null || rightShoulder == null ||
+        leftWrist == null || rightWrist == null ||
+        leftWrist.likelihood < _minConfidence ||
+        rightWrist.likelihood < _minConfidence) {
+      _rowUnevenBarFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    final isRelevantPhase = currentState == ExerciseState.descent ||
+        currentState == ExerciseState.bottom ||
+        currentState == ExerciseState.ascending;
+    if (!isRelevantPhase) {
+      _rowUnevenBarFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    final shoulderWidth =
+        AngleCalculator.calculateHorizontalDistance(leftShoulder, rightShoulder);
+    if (shoulderWidth <= 0) {
+      _rowUnevenBarFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    final wristHeightDelta = (leftWrist.y - rightWrist.y).abs();
+    final normalizedTilt = wristHeightDelta / shoulderWidth;
+
+    if (normalizedTilt > _rowUnevenBarRatio) {
+      _rowUnevenBarFrameCount++;
+      if (_rowUnevenBarFrameCount >= _rowUnevenBarThresholdFrames) {
+        return FormCheckResult(
+          hasError: true,
+          errorMessage: "⚠️ UNEVEN BAR - Keep the bar level!",
+          errorType: FormErrorType.barTilt,
+          severity: FormErrorSeverity.warning,
+        );
+      }
+    } else {
+      _rowUnevenBarFrameCount = 0;
+    }
+
+    return FormCheckResult(hasError: false);
+  }
+
   // OVERHEAD PRESS CHECKS
 
   /// Check for excessive back lean during overhead press.
@@ -832,7 +932,11 @@ class FormChecker {
   FormCheckResult checkAllRowForm(Pose pose, ExerciseState currentState) {
     final torsoResult = checkRowTorsoAngle(pose, currentState);
     final elbowResult = checkRowElbowDrive(pose, currentState);
-    return _persistError(_prioritizeError([torsoResult, elbowResult]));
+    final backRoundingResult = checkRowBackRounding(pose, currentState);
+    final unevenBarResult = checkRowUnevenBar(pose, currentState);
+    return _persistError(
+      _prioritizeError([backRoundingResult, unevenBarResult, torsoResult, elbowResult]),
+    );
   }
 
   FormCheckResult checkAllOverheadForm(Pose pose, ExerciseState currentState) {
