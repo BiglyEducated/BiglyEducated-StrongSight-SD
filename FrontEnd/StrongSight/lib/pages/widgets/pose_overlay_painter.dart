@@ -7,12 +7,16 @@ class PoseOverlayPainter extends CustomPainter {
   final Size imageSize;
   final InputImageRotation rotation;
   final bool isBackCamera;
+  final String exerciseName;
+  final bool showBar;
 
   PoseOverlayPainter({
     required this.poses,
     required this.imageSize,
     required this.rotation,
     required this.isBackCamera,
+    this.exerciseName = '',
+    this.showBar = true,
   });
 
   @override
@@ -142,7 +146,56 @@ class PoseOverlayPainter extends CustomPainter {
           canvas.drawCircle(point, 4, pointPaint);
         }
       }
+
+      // Draw simulated barbell between wrists
+      if (showBar) _drawBar(canvas, pose, size);
     }
+  }
+
+  void _drawBar(Canvas canvas, Pose pose, Size size) {
+    final leftWrist = pose.landmarks[PoseLandmarkType.leftWrist];
+    final rightWrist = pose.landmarks[PoseLandmarkType.rightWrist];
+    if (leftWrist == null || rightWrist == null) return;
+    if (leftWrist.likelihood < 0.5 || rightWrist.likelihood < 0.5) return;
+
+    final leftPt = _translatePoint(leftWrist.x, leftWrist.y, size);
+    final rightPt = _translatePoint(rightWrist.x, rightWrist.y, size);
+    if (leftPt == null || rightPt == null) return;
+
+    // Extend bar slightly beyond each wrist
+    final direction = (rightPt - leftPt);
+    final length = direction.distance;
+    if (length == 0) return;
+    final unit = direction / length;
+    final extension = 24.0;
+    final barStart = leftPt - unit * extension;
+    final barEnd = rightPt + unit * extension;
+
+    // Bar shaft
+    final barPaint = Paint()
+      ..color = Colors.grey[300]!
+      ..strokeWidth = 6.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(barStart, barEnd, barPaint);
+
+    // Collar rings at each end
+    final collarPaint = Paint()
+      ..color = Colors.grey[500]!
+      ..strokeWidth = 10.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.butt;
+    final collarOffset = extension * 0.5;
+    canvas.drawLine(
+      barStart + unit * collarOffset - Offset(-unit.dy, unit.dx) * 4,
+      barStart + unit * collarOffset + Offset(-unit.dy, unit.dx) * 4,
+      collarPaint,
+    );
+    canvas.drawLine(
+      barEnd - unit * collarOffset - Offset(-unit.dy, unit.dx) * 4,
+      barEnd - unit * collarOffset + Offset(-unit.dy, unit.dx) * 4,
+      collarPaint,
+    );
   }
 
   void _drawLine(

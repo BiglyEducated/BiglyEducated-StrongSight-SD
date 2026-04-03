@@ -55,7 +55,9 @@ class RepCounter {
           if (_consecutiveFrames >= _frameThreshold) {
             _transitionTo(ExerciseState.bottom);
           }
-        } else if (angle > config.standingThreshold - 2) {
+        } else if (angle > config.standingThreshold + 5) {
+          // Require angle to go well above standing threshold before resetting
+          // This prevents jitter from killing mid-rep state transitions
           currentState = ExerciseState.standing;
           _consecutiveFrames = 0;
         } else {

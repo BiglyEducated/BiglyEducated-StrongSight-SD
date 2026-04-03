@@ -46,6 +46,8 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
 
   // Mute toggle (UI only for now - no persistence yet)
   bool _isMuted = false;
+  bool _formCheckEnabled = true;
+  bool _showBar = true;
 
   // Sound edge detection (prevents spam)
   int _lastRepCountForSound = 0;
@@ -275,7 +277,8 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
           final int newRepCount = analysis.repCount;
           final String newFeedback = analysis.feedback;
           final String newPhase = analysis.phase;
-          final bool newHasFormError = analysis.hasFormError;
+          // Skip form errors if form check is disabled
+          final bool newHasFormError = _formCheckEnabled && analysis.hasFormError;
 
           // Play sounds BEFORE setState (avoids any rebuild timing weirdness)
           _maybePlaySounds(
@@ -336,7 +339,7 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
               style: const TextStyle(color: Colors.white),
             ),
             const Text(
-              'build: 2026-03-29 v2',
+              'build: 2026-03-29 v5',
               style: TextStyle(color: Colors.white54, fontSize: 11),
             ),
           ],
@@ -349,6 +352,34 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
               icon: const Icon(Icons.flip_camera_ios, color: Colors.white),
               onPressed: _cameraService.isInitialized ? _switchCamera : null,
             ),
+
+          // Bar toggle
+          IconButton(
+            tooltip: _showBar ? 'Hide bar' : 'Show bar',
+            icon: Icon(
+              Icons.horizontal_rule,
+              color: _showBar ? Colors.orangeAccent : Colors.grey,
+            ),
+            onPressed: () {
+              setState(() {
+                _showBar = !_showBar;
+              });
+            },
+          ),
+
+          // Form check toggle
+          IconButton(
+            tooltip: _formCheckEnabled ? 'Disable form checks' : 'Enable form checks',
+            icon: Icon(
+              _formCheckEnabled ? Icons.fact_check : Icons.fact_check_outlined,
+              color: _formCheckEnabled ? Colors.greenAccent : Colors.grey,
+            ),
+            onPressed: () {
+              setState(() {
+                _formCheckEnabled = !_formCheckEnabled;
+              });
+            },
+          ),
 
           // Mute toggle button (kept as requested)
           IconButton(
@@ -438,6 +469,8 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
                           ),
                           rotation: getImageRotation(_cameraService.controller!),
                           isBackCamera: _cameraService.isBackCamera,
+                          exerciseName: widget.exerciseName,
+                          showBar: _showBar,
                         ),
                         size: Size.infinite,
                       ),

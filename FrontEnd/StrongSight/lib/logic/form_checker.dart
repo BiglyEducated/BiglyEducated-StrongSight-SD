@@ -12,8 +12,8 @@ class FormChecker {
   ExerciseState _previousState = ExerciseState.standing;
 
   int _asymmetryFrameCount = 0;
-  static const int _asymmetryThresholdFrames = 5;
-  static const double _asymmetryAngleDiff = 20.0;
+  static const int _asymmetryThresholdFrames = 3; // lowered from 5
+  static const double _asymmetryAngleDiff = 15.0; // tightened from 20°
 
   int _forwardLeanFrameCount = 0;
   static const int _forwardLeanThresholdFrames = 3;
@@ -40,8 +40,8 @@ class FormChecker {
   static const int _rowElbowThresholdFrames = 3;
 
   int _rowBackRoundingFrameCount = 0;
-  static const int _rowBackRoundingThresholdFrames = 3;
-  static const double _rowBackRoundingAngleMin = 150.0;
+  static const int _rowBackRoundingThresholdFrames = 5; // more frames = less noise
+  static const double _rowBackRoundingAngleMin = 140.0; // loosened from 150°
 
   int _rowUnevenBarFrameCount = 0;
   static const int _rowUnevenBarThresholdFrames = 3;
@@ -437,28 +437,46 @@ class FormChecker {
   // ROW CHECKS
 
   /// Check that the torso is sufficiently hinged forward for a row.
+  /// From a front-facing camera, hinge is detected by how far the shoulders
+  /// have dropped vertically toward hip level. When upright, shoulders are
+  /// well above hips. When hinged, the gap closes significantly.
   FormCheckResult checkRowTorsoAngle(Pose pose, ExerciseState currentState) {
     final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
     final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
-    final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
+    final rightHip = pose.landmarks[PoseLandmarkType.rightHip];
 
-    if (leftShoulder == null || leftHip == null || leftKnee == null ||
+    if (leftShoulder == null || rightShoulder == null ||
+        leftHip == null || rightHip == null ||
         leftShoulder.likelihood < _confidenceHigh ||
         leftHip.likelihood < _confidenceHigh) {
       _rowTorsoFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
 
-    // Only check during active movement phases
     if (currentState == ExerciseState.standing) {
       _rowTorsoFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
 
-    final torsoAngle = AngleCalculator.calculateAngle(leftShoulder, leftHip, leftKnee);
+    final avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+    final avgHipY = (leftHip.y + rightHip.y) / 2;
+    final shoulderWidth = AngleCalculator.calculateHorizontalDistance(leftShoulder, rightShoulder);
 
-    // Proper row: torso hinged forward. > 110° = too upright.
-    if (torsoAngle > 110.0) {
+    if (shoulderWidth <= 0) {
+      _rowTorsoFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    // In MediaPipe, Y increases downward. When hinged, shoulders drop closer
+    // to hip Y. Normalize by shoulder width as a body-size reference.
+    // When upright: (hipY - shoulderY) / shoulderWidth is large (shoulders well above hips).
+    // When hinged: ratio shrinks as shoulders approach hip height.
+    // Fire if the ratio is too large, meaning not hinged enough.
+    final verticalGap = (avgHipY - avgShoulderY) / shoulderWidth;
+
+    // If shoulder-to-hip vertical gap > 0.9x shoulder width, not hinged enough
+    if (verticalGap > 0.9) {
       _rowTorsoFrameCount++;
       if (_rowTorsoFrameCount >= _rowTorsoThresholdFrames) {
         return FormCheckResult(
@@ -474,7 +492,8 @@ class FormChecker {
     return FormCheckResult(hasError: false);
   }
 
-  /// Check that elbows drive back past the torso at the top of the row.
+  /// Check that elbows drive back during the pull phase of the row.
+  /// Fires during descent (pulling) if the elbow hasn't moved behind the shoulder yet.
   FormCheckResult checkRowElbowDrive(Pose pose, ExerciseState currentState) {
     final leftElbow = pose.landmarks[PoseLandmarkType.leftElbow];
     final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
@@ -487,6 +506,7 @@ class FormChecker {
       return FormCheckResult(hasError: false);
     }
 
+    // Only check at the top of the pull (bottom state = bar at torso)
     if (currentState != ExerciseState.bottom) {
       _rowElbowFrameCount = 0;
       return FormCheckResult(hasError: false);
@@ -512,15 +532,22 @@ class FormChecker {
   }
 
   /// Check that the row hinge stays neutral instead of rounding through the back.
+  /// From front-on, back rounding causes the shoulders to drop lower than they
+  /// should be relative to the hips. We compare shoulder Y against expected
+  /// position based on hip Y — if shoulders are too low, back is rounding.
   FormCheckResult checkRowBackRounding(Pose pose, ExerciseState currentState) {
     final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
     final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
+    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
+    final rightHip = pose.landmarks[PoseLandmarkType.rightHip];
     final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
+    final rightKnee = pose.landmarks[PoseLandmarkType.rightKnee];
 
-    if (leftShoulder == null || leftHip == null || leftKnee == null ||
+    if (leftShoulder == null || leftHip == null ||
+        rightShoulder == null || rightHip == null ||
+        leftKnee == null || rightKnee == null ||
         leftShoulder.likelihood < _confidenceHigh ||
-        leftHip.likelihood < _confidenceHigh ||
-        leftKnee.likelihood < _confidenceMed) {
+        leftHip.likelihood < _confidenceHigh) {
       _rowBackRoundingFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
@@ -533,8 +560,32 @@ class FormChecker {
       return FormCheckResult(hasError: false);
     }
 
-    final spineAngle = AngleCalculator.calculateAngle(leftShoulder, leftHip, leftKnee);
-    if (spineAngle < _rowBackRoundingAngleMin) {
+    final avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+    final avgHipY = (leftHip.y + rightHip.y) / 2;
+    final avgKneeY = (leftKnee.y + rightKnee.y) / 2;
+    final shoulderWidth = AngleCalculator.calculateHorizontalDistance(leftShoulder, rightShoulder);
+
+    if (shoulderWidth <= 0) {
+      _rowBackRoundingFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    // Hip-to-knee distance as a body proportion reference
+    final hipToKnee = (avgKneeY - avgHipY).abs();
+    if (hipToKnee <= 0) {
+      _rowBackRoundingFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    // When properly hinged, shoulders should be above hips.
+    // Back rounding causes shoulders to drop below or level with hips.
+    // If shoulders are at or below hip height, back is rounding.
+    // (avgShoulderY > avgHipY means shoulders are lower in frame = rounding)
+    final shoulderBelowHip = avgShoulderY - avgHipY;
+    final normalizedDrop = shoulderBelowHip / hipToKnee;
+
+    // Fire if shoulders have dropped below hips by > 10% of hip-to-knee distance
+    if (normalizedDrop > 0.10) {
       _rowBackRoundingFrameCount++;
       if (_rowBackRoundingFrameCount >= _rowBackRoundingThresholdFrames) {
         return FormCheckResult(
@@ -931,11 +982,11 @@ class FormChecker {
 
   FormCheckResult checkAllRowForm(Pose pose, ExerciseState currentState) {
     final torsoResult = checkRowTorsoAngle(pose, currentState);
-    final elbowResult = checkRowElbowDrive(pose, currentState);
     final backRoundingResult = checkRowBackRounding(pose, currentState);
     final unevenBarResult = checkRowUnevenBar(pose, currentState);
+    // Elbow drive check disabled — unreliable from front-facing camera
     return _persistError(
-      _prioritizeError([backRoundingResult, unevenBarResult, torsoResult, elbowResult]),
+      _prioritizeError([backRoundingResult, unevenBarResult, torsoResult]),
     );
   }
 
