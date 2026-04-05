@@ -1,6 +1,5 @@
 import express from "express";
-import { signupUser, verifyToken, deleteUser, getUserInfo, editUserInfo, addWorkout, getUserWorkouts, getUserWorkoutsByDate, deleteUserProfile, editWorkout, deleteWorkout} from "../controllers/authController.js";
-import { get } from "http";
+import { signupUser, verifyToken, deleteUser, getUserInfo, editUserInfo, addWorkout, getUserWorkouts, getUserWorkoutsByDate, deleteUserProfile, editWorkout, deleteWorkout, getExerciseMetrics } from "../controllers/authController.js";
 
 const router = express.Router();
 
@@ -20,4 +19,5 @@ router.post('/add-workout', addWorkout);
 router.get('/get-userWorkouts', getUserWorkouts);
 router.get('/get-userWorkoutsDate', getUserWorkoutsByDate);
 router.delete('/delete-workout', deleteWorkout);
+router.get('/get-exerciseMetrics', getExerciseMetrics);
 export default router;

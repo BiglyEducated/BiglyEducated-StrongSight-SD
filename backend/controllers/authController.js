@@ -287,7 +287,7 @@ export const getUserWorkoutsByDate = async (req, res) => {
     const idToken = authHeader.split("Bearer ")[1];
     const decodedToken = await getAuth().verifyIdToken(idToken);
     const uid = decodedToken.uid;
-
+    
     // Parse date range from query params
     const { start, end } = req.query;
     if (!start || !end) {
@@ -514,6 +514,132 @@ export const editWorkout = async (req, res) => {
     });
   } catch (error) {
     console.error("Error editing workout:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * GET EXERCISE METRICS
+ * Returns per-date max weight and volume for a given exercise, grouped by equipment.
+ * Query params: exerciseName (required)
+ * Requires Authorization: Bearer <token>
+ *
+ * Response shape:
+ * {
+ *   equipmentOptions: string[],
+ *   byEquipment: {
+ *     [equipmentName]: {
+ *       maxWeightMonth:   { [YYYY-MM-DD]: number },
+ *       maxWeight6Months: { [YYYY-MM-DD]: number },
+ *       volumeMonth:      { [YYYY-MM-DD]: number },
+ *       volume6Months:    { [YYYY-MM-DD]: number },
+ *     }
+ *   }
+ * }
+ */
+export const getExerciseMetrics = async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing or invalid token" });
+    }
+
+    const idToken = authHeader.split("Bearer ")[1];
+    const decodedToken = await getAuth().verifyIdToken(idToken);
+    const uid = decodedToken.uid;
+
+    const { exerciseName } = req.query;
+    if (!exerciseName) {
+      return res.status(400).json({ error: "Missing exerciseName parameter" });
+    }
+
+    const snapshot = await db
+      .collection("workouts_completed")
+      .where("uid", "==", uid)
+      .get();
+
+    const now = new Date();
+    const sixMonthsAgo = new Date(now);
+    sixMonthsAgo.setDate(sixMonthsAgo.getDate() - 180);
+    const oneMonthAgo = new Date(now);
+    oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+
+    // byEquipment[equipName][dateString] = { maxWeight, volume }
+    const byEquipment = {};
+
+    if (!snapshot.empty) {
+      snapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        const exercises = data.exercises || [];
+
+        let workoutDate;
+        if (data.date?.toDate) {
+          workoutDate = data.date.toDate();
+        } else if (typeof data.date === "string") {
+          workoutDate = new Date(data.date);
+        } else {
+          workoutDate = new Date();
+        }
+
+        // Only process workouts within 6 months
+        if (workoutDate < sixMonthsAgo) return;
+
+        const dateString = workoutDate.toISOString().split("T")[0];
+
+        exercises.forEach((ex) => {
+          if (ex.name !== exerciseName) return;
+
+          const equipName =
+            (typeof ex.equipment === "object" ? ex.equipment?.name : ex.equipment) || "Unknown";
+
+          if (!byEquipment[equipName]) byEquipment[equipName] = {};
+          if (!byEquipment[equipName][dateString]) {
+            byEquipment[equipName][dateString] = { maxWeight: 0, volume: 0 };
+          }
+
+          const sets = ex.sets || [];
+          sets.forEach((set) => {
+            const w = set.weight || 0;
+            const r = set.reps || 0;
+            if (w > byEquipment[equipName][dateString].maxWeight) {
+              byEquipment[equipName][dateString].maxWeight = w;
+            }
+            byEquipment[equipName][dateString].volume += w * r;
+          });
+        });
+      });
+    }
+
+    // Build the response: split into month / 6-month windows
+    const result = {};
+    for (const [equipName, dateMap] of Object.entries(byEquipment)) {
+      const maxWeightMonth = {};
+      const maxWeight6Months = {};
+      const volumeMonth = {};
+      const volume6Months = {};
+
+      for (const [dateStr, vals] of Object.entries(dateMap)) {
+        const d = new Date(dateStr);
+        maxWeight6Months[dateStr] = vals.maxWeight;
+        volume6Months[dateStr] = vals.volume;
+        if (d >= oneMonthAgo) {
+          maxWeightMonth[dateStr] = vals.maxWeight;
+          volumeMonth[dateStr] = vals.volume;
+        }
+      }
+
+      result[equipName] = { maxWeightMonth, maxWeight6Months, volumeMonth, volume6Months };
+    }
+
+    return res.status(200).json({
+      message: "Exercise metrics fetched successfully",
+      data: {
+        equipmentOptions: Object.keys(result),
+        byEquipment: result,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching exercise metrics:", error);
     return res.status(500).json({ error: error.message });
   }
 };

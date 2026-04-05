@@ -69,6 +69,7 @@ class WorkoutSet {
 class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
   String userName = "User"; // Default value while loading
+  String userEmail = "";
   bool _isLoadingUserInfo = true;
   final String profileImagePath = "assets/images/profile_placeholder.png";
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -229,7 +230,7 @@ class _HomePageState extends State<HomePage>
                         fontWeight: FontWeight.bold,
                         color: primaryTextColor)),
                 const SizedBox(height: 8),
-                Text("Email: yoendry@example.com",
+                Text(userEmail.isNotEmpty ? "Email: $userEmail" : "",
                     style: TextStyle(color: subTextColor)),
                 Divider(color: subTextColor.withOpacity(0.4)),
                 ListTile(
@@ -816,6 +817,7 @@ class _HomePageState extends State<HomePage>
 
         setState(() {
           userName = data['displayName'] ?? 'Yoendry';
+          userEmail = data['email'] ?? '';
           _isLoadingUserInfo = false;
         });
       } else {

@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../models/exercise_catalog.dart';
@@ -54,6 +57,8 @@ class _ExercisesPageState extends State<ExercisesPage> {
   final Set<String> _expandedCards = {};
   String _searchQuery = "";
   Set<String> _selectedMuscles = {};
+  final Map<String, Map<String, dynamic>?> _metricsCache = {};
+  final Set<String> _metricsLoadingSet = {};
 
   // Builds a line chart for PRs or volume
   Widget _buildPRChart(Map<DateTime, double> data) {
@@ -265,171 +270,193 @@ Widget _buildVolumeChart(Map<DateTime, double> data) {
   );
 }
 
+// Converts a raw JSON date→number map from the API into a typed Dart map
+  Map<DateTime, double> _toDateMap(dynamic raw) {
+    if (raw == null) return {};
+    final map = raw as Map<String, dynamic>;
+    return {
+      for (final entry in map.entries)
+        DateTime.parse(entry.key): (entry.value as num).toDouble(),
+    };
+  }
+
+  // Fetches exercise metrics from the backend and caches the result
+  Future<void> _fetchExerciseMetrics(String exerciseName) async {
+    if (_metricsCache.containsKey(exerciseName) ||
+        _metricsLoadingSet.contains(exerciseName)) return;
+
+    setState(() => _metricsLoadingSet.add(exerciseName));
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      final token = await user.getIdToken();
+
+      const baseUrl = 'http://localhost:5001';
+      final uri = Uri.parse('$baseUrl/api/auth/get-exerciseMetrics')
+          .replace(queryParameters: {'exerciseName': exerciseName});
+
+      final response = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        setState(() {
+          _metricsCache[exerciseName] =
+              body['data'] as Map<String, dynamic>?;
+        });
+      } else {
+        setState(() => _metricsCache[exerciseName] = null);
+      }
+    } catch (_) {
+      setState(() => _metricsCache[exerciseName] = null);
+    } finally {
+      setState(() => _metricsLoadingSet.remove(exerciseName));
+    }
+  }
+
 // Builds the metrics section with PR and volume charts
   Widget _buildMetricsSection(String exerciseName) {
-  //API GOES HERE REPLACE REPLACE YEUUUURRRR
-    final allWorkouts = [
-      Workout(
-        workoutName: "Test",
-        date: DateTime.now().subtract(const Duration(days: 10)),
-        exercises: [
-          WorkoutExercise(
-            name: exerciseName,
-            equipment: "Barbell",
-            sets: [WorkoutSet(reps: 10, weight: 100)],
-          ),
-        ],
-      ),
-      Workout(
-        workoutName: "Test",
-        date: DateTime.now().subtract(const Duration(days: 5)),
-        exercises: [
-          WorkoutExercise(
-            name: exerciseName,
-            equipment: "Dumbbell",
-            sets: [WorkoutSet(reps: 8, weight: 120)],
-          ),
-        ],
-      ),
-    ];
-  final rawOptions = allWorkouts
-    .expand((w) => w.exercises)
-    .where((e) => e.name == exerciseName)
-    .map((e) => e.equipment)
-    .toSet()
-    .toList();
+    // Trigger a fetch if we don't have data yet
+    if (!_metricsCache.containsKey(exerciseName) &&
+        !_metricsLoadingSet.contains(exerciseName)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fetchExerciseMetrics(exerciseName);
+      });
+    }
 
-final options = rawOptions.isNotEmpty
-    ? rawOptions
-    : ["Barbell", "Dumbbell", "Machine"];
+    // Loading spinner
+    if (_metricsLoadingSet.contains(exerciseName)) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-final selected = _selectedEquipment[exerciseName] ?? options.first;
-
-if (!options.contains(selected)) {
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    setState(() {
-      _selectedEquipment[exerciseName] = options.first;
-    });
-  });
-}
-
-  final filtered = filterWorkoutsByExercise(allWorkouts, exerciseName, selected);
-
-  final lastMonth = filterByRange(filtered, const Duration(days: 30));
-  final last6Months = filterByRange(filtered, const Duration(days: 180));
-
-  final prsMonth = getPRs(lastMonth, exerciseName, selected);
-  final volumeMonth = getVolume(lastMonth, exerciseName, selected);
-
-  // If no data, show placeholder
-  if (prsMonth.isEmpty && volumeMonth.isEmpty) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 12),
-      child: Center(
-        child: Text(
-          "Lift for results",
-          style: TextStyle(fontSize: 16),
+    // No data (fetch failed or no workouts)
+    final metricsData = _metricsCache[exerciseName];
+    if (metricsData == null) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(
+          child: Text("Lift for results", style: TextStyle(fontSize: 16)),
         ),
-      ),
+      );
+    }
+
+    // Resolve equipment options from API response
+    final equipmentOptions =
+        List<String>.from(metricsData['equipmentOptions'] as List? ?? []);
+    final options = equipmentOptions.isNotEmpty
+        ? equipmentOptions
+        : ["Barbell", "Dumbbell", "Machine"];
+
+    final selected = _selectedEquipment[exerciseName] ?? options.first;
+    if (!options.contains(selected)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() => _selectedEquipment[exerciseName] = options.first);
+      });
+    }
+
+    // Pull chart data for the selected equipment
+    final byEquipment =
+        metricsData['byEquipment'] as Map<String, dynamic>? ?? {};
+    final equipData =
+        byEquipment[selected] as Map<String, dynamic>? ?? {};
+
+    final prsMonth = _toDateMap(equipData['maxWeightMonth']);
+    final prs6Months = _toDateMap(equipData['maxWeight6Months']);
+    final volumeMonth = _toDateMap(equipData['volumeMonth']);
+    final volume6Months = _toDateMap(equipData['volume6Months']);
+
+    if (prsMonth.isEmpty &&
+        prs6Months.isEmpty &&
+        volumeMonth.isEmpty &&
+        volume6Months.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(
+          child: Text("Lift for results", style: TextStyle(fontSize: 16)),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        DropdownButton<String>(
+          value: options.contains(selected) ? selected : options.first,
+          items: options.map((e) {
+            return DropdownMenuItem(value: e, child: Text(e));
+          }).toList(),
+          onChanged: (value) {
+            setState(() => _selectedEquipment[exerciseName] = value!);
+          },
+        ),
+
+        const SizedBox(height: 8),
+        const Text("PR (Last Month)"),
+        const SizedBox(height: 8),
+
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF12110F)
+                : Colors.grey[100],
+          ),
+          child: SizedBox(height: 160, child: _buildPRChart(prsMonth)),
+        ),
+
+        const SizedBox(height: 12),
+        const Text("PR (6 Months)"),
+        const SizedBox(height: 8),
+
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF12110F)
+                : Colors.grey[100],
+          ),
+          child: SizedBox(height: 160, child: _buildPRChart(prs6Months)),
+        ),
+
+        const SizedBox(height: 12),
+        const Text("Volume (Last Month)"),
+        const SizedBox(height: 8),
+
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF12110F)
+                : Colors.grey[100],
+          ),
+          child: SizedBox(height: 160, child: _buildVolumeChart(volumeMonth)),
+        ),
+
+        const SizedBox(height: 12),
+        const Text("Volume (6 Months)"),
+        const SizedBox(height: 8),
+
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF12110F)
+                : Colors.grey[100],
+          ),
+          child:
+              SizedBox(height: 160, child: _buildVolumeChart(volume6Months)),
+        ),
+      ],
     );
-  }
-  return Column(
-    children: [
-      DropdownButton<String>(
-        value: selected,
-        items: options.map((e) {
-          return DropdownMenuItem(
-            value: e,
-            child: Text(e),
-          );
-        }).toList(),
-        onChanged: (value) {
-          setState(() {
-            _selectedEquipment[exerciseName] = value!;
-          });
-        },
-      ),
-
-      const SizedBox(height: 8),
-      //Shows PR and Volume charts for the last month and last 6 months
-      const Text("PR (Last Month)"),
-      const SizedBox(height: 8),
-
-      Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF12110F)
-              : Colors.grey[100],
-        ),
-        child: SizedBox(
-          height: 160,
-          child: _buildPRChart(prsMonth),
-        ),
-      ),
-
-      const SizedBox(height: 12),
-
-      const Text("PR (6 Months)"),
-      const SizedBox(height: 8),
-
-      Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF12110F)
-              : Colors.grey[100],
-        ),
-        child: SizedBox(
-          height: 160,
-          child: _buildPRChart(
-            getPRs(last6Months, exerciseName, selected),
-          ),
-        ),
-      ),
-      
-      const SizedBox(height: 12),
-      const Text("Volume (Last Month)"),
-      const SizedBox(height: 8),
-
-      Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF12110F)
-              : Colors.grey[100],
-        ),
-        child: SizedBox(
-          height: 160,
-          child: _buildVolumeChart(volumeMonth),
-        ),
-      ),
-
-      const SizedBox(height: 12),
-
-      const Text("Volume (6 Months)"),
-      const SizedBox(height: 8),
-
-      Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF12110F)
-              : Colors.grey[100],
-        ),
-        child: SizedBox(
-          height: 160,
-          child: _buildVolumeChart(
-            getVolume(last6Months, exerciseName, selected),
-          ),
-        ),
-      ),
-    ],
-  );
   }
 
   //Exercise Card Builder
