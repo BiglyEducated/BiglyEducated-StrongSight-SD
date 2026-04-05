@@ -150,9 +150,11 @@ class _HomePageState extends State<HomePage>
     int count = 0;
 
     for (final date in weekDates) {
-      final formatted = "${_monthNumberToStr(date.month)} ${date.day}";
-      // Check if there's a workout for this date in our data
-      if (_allWorkoutsData.containsKey(formatted)) {
+      final hasWorkout = recentWorkouts.any((w) =>
+          w.date.year == date.year &&
+          w.date.month == date.month &&
+          w.date.day == date.day);
+      if (hasWorkout) {
         count++;
       }
     }
@@ -913,11 +915,9 @@ class _HomePageState extends State<HomePage>
           }
 
           recentWorkouts = workouts;
+          _streakDays = _calculateWeeklyStreak();
           _isLoadingWorkouts = false;
         });
-
-        // Recalculate streak after getting workouts
-        _streakDays = _calculateWeeklyStreak();
       } else {
         setState(() {
           _isLoadingWorkouts = false;
