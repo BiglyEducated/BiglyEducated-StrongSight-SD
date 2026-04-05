@@ -20,7 +20,7 @@ class CalendarPage extends StatefulWidget {
 }
 
 class _CalendarPageState extends State<CalendarPage> {
-  static const String BASE_URL = 'http://localhost:5001';
+  static const String BASE_URL = 'https://biglyeducated-strongsight-sd.onrender.com';
 
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;

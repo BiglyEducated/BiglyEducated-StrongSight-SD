@@ -14,7 +14,7 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  static const String BASE_URL = 'http://localhost:5001';
+  static const String BASE_URL = 'https://biglyeducated-strongsight-sd.onrender.com';
 
   bool _notificationsEnabled = true;
   bool _soundEnabled = true;

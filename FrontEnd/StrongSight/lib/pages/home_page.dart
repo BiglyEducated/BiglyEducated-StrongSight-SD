@@ -846,7 +846,7 @@ class _HomePageState extends State<HomePage>
       }
 
       final idToken = await user.getIdToken();
-      const String baseUrl = 'http://localhost:5001';
+      const String baseUrl = 'https://biglyeducated-strongsight-sd.onrender.com';
       final uri = Uri.parse('$baseUrl/api/auth/get-userInfo');
 
       final response = await http.get(
@@ -890,7 +890,7 @@ class _HomePageState extends State<HomePage>
       }
 
       final idToken = await user.getIdToken();
-      const String baseUrl = 'http://localhost:5001';
+      const String baseUrl = 'https://biglyeducated-strongsight-sd.onrender.com';
       final uri = Uri.parse('$baseUrl/api/auth/get-userWorkouts');
 
       final response = await http.get(

@@ -42,7 +42,7 @@ class _RegisterPageState extends State<RegisterPage> {
   String? _selectedGender;
   bool _isLoading = false;
 
-  static const String BASE_URL = 'https://strongsight-backend.onrender.com'; // TODO: replace with your actual Render URL
+  static const String BASE_URL = 'https://biglyeducated-strongsight-sd.onrender.com';
 
   /// Create user in Firebase Auth, then store additional fields in backend
   Future<void> _handleRegister() async {
