@@ -5,7 +5,9 @@ import { readFileSync } from "fs";
 import authRoutes from "./routes/authRoutes.js";
 import { db } from "./config/firebase.js";
 
-const serviceAccount = JSON.parse(readFileSync("./serviceAccountKey.json", "utf8"));
+const serviceAccount = process.env.SERVICE_ACCOUNT_JSON
+  ? JSON.parse(process.env.SERVICE_ACCOUNT_JSON)
+  : JSON.parse(readFileSync("./serviceAccountKey.json", "utf8"));
 const app = express();
 const PORT = process.env.PORT || 5001;
 
