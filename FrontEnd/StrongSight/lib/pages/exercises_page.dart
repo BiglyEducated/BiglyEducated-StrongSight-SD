@@ -52,6 +52,85 @@ class ExercisesPage extends StatefulWidget {
 
 class _ExercisesPageState extends State<ExercisesPage> {
   final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTodaysWorkout();
+  }
+
+  Future<void> _fetchTodaysWorkout() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        setState(() => _isLoadingTodaysWorkout = false);
+        return;
+      }
+
+      final idToken = await user.getIdToken();
+      const String baseUrl = 'http://localhost:5001';
+      final uri = Uri.parse('$baseUrl/api/auth/get-userWorkouts');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $idToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final data = responseData['data'] as Map<String, dynamic>;
+
+        final now = DateTime.now();
+        Workout? found;
+
+        data.forEach((dateKey, workoutData) {
+          final date = DateTime.parse(
+              workoutData['date'] ?? DateTime.now().toString());
+          if (date.year == now.year &&
+              date.month == now.month &&
+              date.day == now.day) {
+            List<WorkoutExercise> exercises = [];
+            if (workoutData['exercises'] != null) {
+              for (var ex in workoutData['exercises']) {
+                List<WorkoutSet> sets = [];
+                if (ex['sets'] != null) {
+                  for (var s in ex['sets']) {
+                    sets.add(WorkoutSet(
+                      reps: s['reps'] ?? 0,
+                      weight: (s['weight'] ?? 0).toDouble(),
+                    ));
+                  }
+                }
+                exercises.add(WorkoutExercise(
+                  name: ex['name'] ?? 'Unknown',
+                  equipment: ex['equipment']?['name'] ?? 'Unknown',
+                  sets: sets,
+                ));
+              }
+            }
+            found = Workout(
+              workoutName: workoutData['workoutName'] ?? 'Unnamed Workout',
+              date: date,
+              exercises: exercises,
+            );
+          }
+        });
+
+        setState(() {
+          todaysWorkout = found;
+          _isLoadingTodaysWorkout = false;
+        });
+      } else {
+        setState(() => _isLoadingTodaysWorkout = false);
+      }
+    } catch (e) {
+      print('Error fetching today\'s workout: $e');
+      setState(() => _isLoadingTodaysWorkout = false);
+    }
+  }
   final Set<String> _pinnedExercises = {};
   final Map<String, String> _selectedEquipment = {};
   final Set<String> _expandedCards = {};
@@ -723,36 +802,8 @@ String _formatSets(List<WorkoutSet> sets) {
   }
 
 
-  //Todays workout(REPLACE WITH API DATA)
-  final Workout? todaysWorkout = Workout(                                                                         ///REPLACE WITH API DATA
-    date: DateTime.now(),
-    workoutName: "Leetcode Session",
-    exercises: [
-      WorkoutExercise(
-        name: "Squat",
-        equipment: "Barbell",
-        sets: [
-        WorkoutSet(reps: 8, weight: 135),
-        WorkoutSet(reps: 8, weight: 135),
-      ],
-    ),
-    WorkoutExercise(
-      name: "Bench Press",
-      equipment: "Barbell",
-      sets: [
-        WorkoutSet(reps: 10, weight: 95),
-      ],
-    ),
-    WorkoutExercise(
-      name: "Bicep Curls",
-      equipment: "Dumbbell",
-      sets: [
-        WorkoutSet(reps: 12, weight: 25),
-        WorkoutSet(reps: 12, weight: 25),
-      ],
-    ),
-  ],
-);
+  Workout? todaysWorkout;
+  bool _isLoadingTodaysWorkout = true;
 
   //Exercise Library
 
