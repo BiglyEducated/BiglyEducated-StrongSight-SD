@@ -84,6 +84,7 @@ class _HomePageState extends State<HomePage>
 
   int _streakDays = 0;
   int? _expandedWorkoutIndex;
+  List<Map<String, String>> _personalRecords = [];
 
   // --------------------- Today's Workout & Recent Workouts (from API) -----------
   Workout? todaysWorkout;
@@ -142,6 +143,45 @@ class _HomePageState extends State<HomePage>
       "Dec"
     ];
     return months[m];
+  }
+
+  // --------------------- PR CALCULATION ---------------------------------------------
+  static const _trackedLifts = ['Bench Press', 'Squat', 'Deadlift'];
+
+  List<Map<String, String>> _calculatePRs(List<Workout> workouts) {
+    final Map<String, int> maxWeights = {};
+    final Map<String, DateTime> maxDates = {};
+
+    for (final workout in workouts) {
+      for (final exercise in workout.exercises) {
+        if (!_trackedLifts.contains(exercise.name)) continue;
+        for (final set in exercise.sets) {
+          final current = maxWeights[exercise.name] ?? 0;
+          if (set.weight > current) {
+            maxWeights[exercise.name] = set.weight;
+            maxDates[exercise.name] = workout.date;
+          }
+        }
+      }
+    }
+
+    const fullMonths = [
+      '', 'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    final results = <Map<String, String>>[];
+    for (final lift in _trackedLifts) {
+      if (maxWeights.containsKey(lift)) {
+        final date = maxDates[lift]!;
+        results.add({
+          'lift': lift,
+          'weight': '${maxWeights[lift]} lbs',
+          'date': '${fullMonths[date.month]} ${date.day}, ${date.year}',
+        });
+      }
+    }
+    return results;
   }
 
   //Count how many days this week the user worked out
@@ -724,14 +764,18 @@ class _HomePageState extends State<HomePage>
     Color accentColor,
     Color subTextColor,
   ) {
-    final prs = [
-      {"lift": "Bench Press", "weight": "205 lbs", "date": "October 26, 2025"},
-      {"lift": "Squat", "weight": "275 lbs", "date": "September 1, 2025"},
-      {"lift": "Deadlift", "weight": "315 lbs", "date": "October 12, 2025"},
-    ];
+    if (_personalRecords.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Text(
+          "No PRs yet — start lifting to track your records!",
+          style: TextStyle(color: subTextColor, fontSize: 14),
+        ),
+      );
+    }
 
     return Column(
-      children: prs.map((p) {
+      children: _personalRecords.map((p) {
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
@@ -915,6 +959,7 @@ class _HomePageState extends State<HomePage>
           }
 
           recentWorkouts = workouts;
+          _personalRecords = _calculatePRs(workouts);
           _streakDays = _calculateWeeklyStreak();
           _isLoadingWorkouts = false;
         });
