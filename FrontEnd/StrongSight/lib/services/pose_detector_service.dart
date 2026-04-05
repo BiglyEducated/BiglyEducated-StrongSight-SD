@@ -27,6 +27,10 @@ class PoseDetectorService {
       _repCounter?.averageEccentricDurationSeconds;
   double? get averageConcentricDurationSeconds =>
       _repCounter?.averageConcentricDurationSeconds;
+  List<double> get eccentricDurationsPerRep =>
+      _repCounter?.eccentricDurationsPerRep ?? [];
+  List<double> get concentricDurationsPerRep =>
+      _repCounter?.concentricDurationsPerRep ?? [];
 
   Future<void> initialize() async {
     if (_isInitialized) return;

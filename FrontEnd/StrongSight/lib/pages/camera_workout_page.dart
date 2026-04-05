@@ -58,6 +58,11 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
   final Map<String, int> _formIssueCounts = {};
   String? _activeFormIssueKey;
 
+  // Per-rep form error tracking for degradation analysis
+  final List<int> _formErrorsPerRep = [];
+  int _currentRepErrorCount = 0;
+  int _lastRepCountForDegradation = 0;
+
   @override
   void initState() {
     super.initState();
@@ -194,6 +199,7 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
     if (normalized.contains('BACK ROUNDING')) return 'Back rounding';
     if (normalized.contains('LEG DRIVE')) return 'Leg drive';
     if (normalized.contains('UNEVEN HIPS')) return 'Uneven hips';
+    if (normalized.contains('BAR TILTING')) return 'Bar tilting on back';
     if (normalized.contains('UNEVEN PRESS')) return 'Uneven press';
     if (normalized.contains('UNEVEN')) return 'Uneven movement';
     if (normalized.contains('ELBOW FLARE')) return 'Elbow flare';
@@ -213,7 +219,17 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
   void _trackFormIssues({
     required String feedback,
     required bool hasFormError,
+    required int currentRepCount,
   }) {
+    // When a new rep completes, reset activeFormIssueKey so issues
+    // that persist across reps get counted fresh each rep
+    if (currentRepCount > _lastRepCountForDegradation) {
+      _formErrorsPerRep.add(_currentRepErrorCount);
+      _currentRepErrorCount = 0;
+      _lastRepCountForDegradation = currentRepCount;
+      _activeFormIssueKey = null; // reset so same issue counts again next rep
+    }
+
     final issueKey = _extractFormIssueKey(feedback, hasFormError);
 
     if (issueKey == null) {
@@ -221,9 +237,10 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
       return;
     }
 
-    // Count only when a warning first appears or changes category.
+    // Count only when a warning first appears or changes category
     if (_activeFormIssueKey != issueKey) {
       _formIssueCounts.update(issueKey, (value) => value + 1, ifAbsent: () => 1);
+      _currentRepErrorCount++;
     }
 
     _activeFormIssueKey = issueKey;
@@ -232,6 +249,11 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
   Future<void> _finishWorkout() async {
     await _cameraService.stopImageStream();
     if (!mounted) return;
+
+    // Snapshot the last rep's error count before navigating
+    if (_repCount > _lastRepCountForDegradation) {
+      _formErrorsPerRep.add(_currentRepErrorCount);
+    }
 
     await Navigator.push(
       context,
@@ -242,6 +264,8 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
           formIssueCounts: Map<String, int>.from(_formIssueCounts),
           averageEccentricSeconds: _poseDetector.averageEccentricDurationSeconds,
           averageConcentricSeconds: _poseDetector.averageConcentricDurationSeconds,
+          eccentricDurationsPerRep: List<double>.from(_poseDetector.eccentricDurationsPerRep),
+          formErrorsPerRep: List<int>.from(_formErrorsPerRep),
         ),
       ),
     );
@@ -289,6 +313,7 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
           _trackFormIssues(
             feedback: newFeedback,
             hasFormError: newHasFormError,
+            currentRepCount: newRepCount,
           );
 
           setState(() {

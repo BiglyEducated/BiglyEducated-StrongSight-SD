@@ -9,6 +9,8 @@ class WorkoutFeedbackSummaryPage extends StatelessWidget {
   final Map<String, int> formIssueCounts;
   final double? averageEccentricSeconds;
   final double? averageConcentricSeconds;
+  final List<double> eccentricDurationsPerRep;
+  final List<int> formErrorsPerRep;
 
   const WorkoutFeedbackSummaryPage({
     super.key,
@@ -17,6 +19,8 @@ class WorkoutFeedbackSummaryPage extends StatelessWidget {
     required this.formIssueCounts,
     this.averageEccentricSeconds,
     this.averageConcentricSeconds,
+    this.eccentricDurationsPerRep = const [],
+    this.formErrorsPerRep = const [],
   });
 
   @override
@@ -53,7 +57,7 @@ class WorkoutFeedbackSummaryPage extends StatelessWidget {
         ),
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -120,6 +124,19 @@ class WorkoutFeedbackSummaryPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
+              // Form degradation section
+              if (_buildDegradationAnalysis() != null) ...[  
+                _buildDegradationCard(
+                  context,
+                  cardColor,
+                  primaryTextColor,
+                  secondaryTextColor,
+                  neutralBorderColor,
+                  accentColor,
+                  isDark,
+                ),
+                const SizedBox(height: 20),
+              ],
               Text(
                 hasIssues ? 'Improper form detected:' : 'Form looks good!',
                 style: TextStyle(
@@ -132,19 +149,15 @@ class WorkoutFeedbackSummaryPage extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               if (hasIssues)
-                Expanded(
-                  child: ListView.separated(
-                    itemCount: sortedIssues.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final issue = sortedIssues[index];
-                      return FormIssueFeedbackTile(
-                        issueTitle: issue.key,
-                        issueCount: issue.value,
-                        isDarkMode: isDark,
-                      );
-                    },
-                  ),
+                Column(
+                  children: sortedIssues.map((issue) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: FormIssueFeedbackTile(
+                      issueTitle: issue.key,
+                      issueCount: issue.value,
+                      isDarkMode: isDark,
+                    ),
+                  )).toList(),
                 )
               else
                 Container(
@@ -187,6 +200,7 @@ class WorkoutFeedbackSummaryPage extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -197,6 +211,104 @@ class WorkoutFeedbackSummaryPage extends StatelessWidget {
   String _formatSeconds(double? value) {
     if (value == null) return 'N/A';
     return '${value.toStringAsFixed(2)}s';
+  }
+
+  // Returns a degradation summary or null if not enough data
+  Map<String, dynamic>? _buildDegradationAnalysis() {
+    final List<String> findings = [];
+
+    // Speed degradation: compare first half vs second half eccentric durations
+    if (eccentricDurationsPerRep.length >= 4) {
+      final half = eccentricDurationsPerRep.length ~/ 2;
+      final earlyAvg = eccentricDurationsPerRep
+              .sublist(0, half)
+              .reduce((a, b) => a + b) /
+          half;
+      final lateAvg = eccentricDurationsPerRep
+              .sublist(half)
+              .reduce((a, b) => a + b) /
+          (eccentricDurationsPerRep.length - half);
+      // If late reps are >25% slower than early reps, flag fatigue
+      if (lateAvg > earlyAvg * 1.25) {
+        findings.add(
+            'Rep speed slowed by ${((lateAvg / earlyAvg - 1) * 100).round()}% toward the end of the set.');
+      }
+    }
+
+    // Form error degradation: compare first half vs second half error counts
+    if (formErrorsPerRep.length >= 4) {
+      final half = formErrorsPerRep.length ~/ 2;
+      final earlyErrors = formErrorsPerRep
+          .sublist(0, half)
+          .reduce((a, b) => a + b);
+      final lateErrors = formErrorsPerRep
+          .sublist(half)
+          .reduce((a, b) => a + b);
+      if (lateErrors > earlyErrors) {
+        findings.add(
+            'Form errors increased in the second half of the set ($earlyErrors early vs $lateErrors late). Consider reducing weight or reps.');
+      }
+    }
+
+    if (findings.isEmpty) return null;
+    return {'findings': findings};
+  }
+
+  Widget _buildDegradationCard(
+    BuildContext context,
+    Color cardColor,
+    Color primaryTextColor,
+    Color secondaryTextColor,
+    Color borderColor,
+    Color accentColor,
+    bool isDark,
+  ) {
+    final analysis = _buildDegradationAnalysis();
+    if (analysis == null) return const SizedBox.shrink();
+    final findings = analysis['findings'] as List<String>;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: isDark ? 0.10 : 0.07),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.orange.withValues(alpha: isDark ? 0.45 : 0.35),
+          width: 1.2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.trending_down, color: Colors.orange, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Form Degradation',
+                style: TextStyle(
+                  color: primaryTextColor,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...findings.map((f) => Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  f,
+                  style: TextStyle(
+                    color: secondaryTextColor,
+                    fontSize: 14,
+                    height: 1.4,
+                  ),
+                ),
+              )),
+        ],
+      ),
+    );
   }
 }
 
@@ -357,6 +469,29 @@ class FormIssueFeedbackTile extends StatelessWidget {
 
 List<String> _suggestedFeedbackForIssue(String issueTitle) {
   switch (issueTitle) {
+    case 'Knee cave':
+      return const [
+        'Focus on pushing your knees out in the direction of your toes.',
+        'Strengthening your glutes and hip abductors can help long-term.',
+        'Try widening your stance slightly if it keeps happening.',
+      ];
+    case 'Forward lean':
+      return const [
+        'Keep your chest up and eyes forward throughout the movement.',
+        'Tightness in the ankles or hips can cause forward lean — try elevating your heels slightly.',
+        'If it persists, lower the weight and focus on staying upright.',
+      ];
+    case 'Uneven movement':
+      return const [
+        'Focus on driving evenly through both feet on the way up.',
+        'A one-sided lean can indicate a muscular imbalance — single-leg work like Bulgarian split squats can help.',
+      ];
+    case 'Uneven hips':
+    case 'Bar tilting on back':
+      return const [
+        'Check that the bar is centered on your traps before descending.',
+        'Focus on keeping both feet evenly loaded through the whole rep.',
+      ];
     case 'Leg drive':
       return const [
         'Stay strict and let your shoulders do the work.',

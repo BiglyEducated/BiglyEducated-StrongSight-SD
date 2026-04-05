@@ -86,6 +86,8 @@ class FormChecker {
     _baselineKneeAnkleRatio = null;
     _previousState = ExerciseState.standing;
     _asymmetryFrameCount = 0;
+    _hipAsymmetryFrameCount = 0;
+    _wristTiltFrameCount = 0;
     _forwardLeanFrameCount = 0;
     _elbowFlareFrameCount = 0;
     _wristStackFrameCount = 0;
@@ -207,6 +209,10 @@ class FormChecker {
     return FormCheckResult(hasError: false);
   }
 
+  // Hip height asymmetry frame counter (separate from knee angle counter)
+  int _hipAsymmetryFrameCount = 0;
+  int _wristTiltFrameCount = 0;
+
   FormCheckResult checkSquatSymmetry(Pose pose, ExerciseState currentState) {
     final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
     final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
@@ -214,12 +220,18 @@ class FormChecker {
     final rightHip = pose.landmarks[PoseLandmarkType.rightHip];
     final rightKnee = pose.landmarks[PoseLandmarkType.rightKnee];
     final rightAnkle = pose.landmarks[PoseLandmarkType.rightAnkle];
+    final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
+    final leftWrist = pose.landmarks[PoseLandmarkType.leftWrist];
+    final rightWrist = pose.landmarks[PoseLandmarkType.rightWrist];
 
     if (leftHip == null || leftKnee == null || leftAnkle == null ||
         rightHip == null || rightKnee == null || rightAnkle == null ||
         leftKnee.likelihood < _confidenceMed || rightKnee.likelihood < _confidenceMed ||
         leftHip.likelihood < _confidenceHigh || rightHip.likelihood < _confidenceHigh) {
       _asymmetryFrameCount = 0;
+      _hipAsymmetryFrameCount = 0;
+      _wristTiltFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
 
@@ -228,16 +240,20 @@ class FormChecker {
                            currentState == ExerciseState.ascending;
     if (!isRelevantPhase) {
       _asymmetryFrameCount = 0;
+      _hipAsymmetryFrameCount = 0;
+      _wristTiltFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
 
-    double leftKneeAngle = AngleCalculator.calculateAngle(leftHip, leftKnee, leftAnkle);
-    double rightKneeAngle = AngleCalculator.calculateAngle(rightHip, rightKnee, rightAnkle);
-    double angleDifference = (leftKneeAngle - rightKneeAngle).abs();
-
+    // Check 1: knee angle asymmetry (one leg deeper than the other)
+    final double leftKneeAngle = AngleCalculator.calculateAngle(leftHip, leftKnee, leftAnkle);
+    final double rightKneeAngle = AngleCalculator.calculateAngle(rightHip, rightKnee, rightAnkle);
+    final double angleDifference = (leftKneeAngle - rightKneeAngle).abs();
     if (angleDifference > _asymmetryAngleDiff) {
       _asymmetryFrameCount++;
       if (_asymmetryFrameCount >= _asymmetryThresholdFrames) {
+        _hipAsymmetryFrameCount = 0;
+        _wristTiltFrameCount = 0;
         return FormCheckResult(
           hasError: true,
           errorMessage: "⚠️ UNEVEN - Balance both sides!",
@@ -248,6 +264,50 @@ class FormChecker {
     } else {
       _asymmetryFrameCount = 0;
     }
+
+    // Check 2: hip height asymmetry (weight shifting to one side)
+    final shoulderWidth = leftShoulder != null && rightShoulder != null
+        ? AngleCalculator.calculateHorizontalDistance(leftShoulder, rightShoulder)
+        : AngleCalculator.calculateHorizontalDistance(leftHip, rightHip);
+    if (shoulderWidth > 0) {
+      final hipHeightDiff = (leftHip.y - rightHip.y).abs();
+      final normalizedHipDiff = hipHeightDiff / shoulderWidth;
+      if (normalizedHipDiff > 0.08) {
+        _hipAsymmetryFrameCount++;
+        if (_hipAsymmetryFrameCount >= _asymmetryThresholdFrames) {
+          _wristTiltFrameCount = 0;
+          return FormCheckResult(
+            hasError: true,
+            errorMessage: "⚠️ UNEVEN HIPS - Don't shift weight!",
+            errorType: FormErrorType.asymmetry,
+            severity: FormErrorSeverity.warning,
+          );
+        }
+      } else {
+        _hipAsymmetryFrameCount = 0;
+      }
+
+      // Check 3: wrist height asymmetry (bar tilt on back)
+      if (leftWrist != null && rightWrist != null &&
+          leftWrist.likelihood >= _confidenceLow && rightWrist.likelihood >= _confidenceLow) {
+        final wristHeightDiff = (leftWrist.y - rightWrist.y).abs();
+        final normalizedWristDiff = wristHeightDiff / shoulderWidth;
+        if (normalizedWristDiff > 0.15) {
+          _wristTiltFrameCount++;
+          if (_wristTiltFrameCount >= _asymmetryThresholdFrames) {
+            return FormCheckResult(
+              hasError: true,
+              errorMessage: "⚠️ BAR TILTING - Level the bar!",
+              errorType: FormErrorType.barTilt,
+              severity: FormErrorSeverity.warning,
+            );
+          }
+        } else {
+          _wristTiltFrameCount = 0;
+        }
+      }
+    }
+
     return FormCheckResult(hasError: false);
   }
 

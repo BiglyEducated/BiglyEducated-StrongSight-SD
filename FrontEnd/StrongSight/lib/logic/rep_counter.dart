@@ -30,6 +30,10 @@ class RepCounter {
   double? get averageConcentricDurationSeconds =>
       _concentricSamples == 0 ? null : _totalConcentricDurationSeconds / _concentricSamples;
 
+  // Per-rep eccentric durations for degradation analysis
+  final List<double> eccentricDurationsPerRep = [];
+  final List<double> concentricDurationsPerRep = [];
+
   RepCounter(this.config) {
     feedbackMessage = config.readyCue;
   }
@@ -101,6 +105,7 @@ class RepCounter {
             now.difference(_descentStartTime!).inMilliseconds / 1000.0;
         _totalEccentricDurationSeconds += lastEccentricDurationSeconds!;
         _eccentricSamples++;
+        eccentricDurationsPerRep.add(lastEccentricDurationSeconds!);
 
         if (lastEccentricDurationSeconds! < config.minEccentricSeconds) {
           isError = true;
@@ -121,6 +126,7 @@ class RepCounter {
             now.difference(_bottomReachedTime!).inMilliseconds / 1000.0;
         _totalConcentricDurationSeconds += lastConcentricDurationSeconds!;
         _concentricSamples++;
+        concentricDurationsPerRep.add(lastConcentricDurationSeconds!);
 
         if (lastConcentricDurationSeconds! < config.minConcentricSeconds) {
           isError = true;
@@ -152,5 +158,7 @@ class RepCounter {
     _totalConcentricDurationSeconds = 0.0;
     _eccentricSamples = 0;
     _concentricSamples = 0;
+    eccentricDurationsPerRep.clear();
+    concentricDurationsPerRep.clear();
   }
 }
