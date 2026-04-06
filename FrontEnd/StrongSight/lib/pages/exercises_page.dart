@@ -68,7 +68,7 @@ class _ExercisesPageState extends State<ExercisesPage> {
       }
 
       final idToken = await user.getIdToken();
-      const String baseUrl = 'http://localhost:5001';
+      const String baseUrl = 'https://biglyeducated-strongsight-sd.onrender.com';
       final uri = Uri.parse('$baseUrl/api/auth/get-userWorkouts');
 
       final response = await http.get(
@@ -371,7 +371,7 @@ Widget _buildVolumeChart(Map<DateTime, double> data) {
       if (user == null) return;
       final token = await user.getIdToken();
 
-      const baseUrl = 'http://localhost:5001';
+      const baseUrl = 'https://biglyeducated-strongsight-sd.onrender.com';
       final uri = Uri.parse('$baseUrl/api/auth/get-exerciseMetrics')
           .replace(queryParameters: {'exerciseName': exerciseName});
 
