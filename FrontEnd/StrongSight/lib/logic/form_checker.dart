@@ -12,8 +12,8 @@ class FormChecker {
   ExerciseState _previousState = ExerciseState.standing;
 
   int _asymmetryFrameCount = 0;
-  static const int _asymmetryThresholdFrames = 3; // lowered from 5
-  static const double _asymmetryAngleDiff = 15.0; // tightened from 20°
+  static const int _asymmetryThresholdFrames = 5;
+  static const double _asymmetryAngleDiff = 20.0;
 
   int _forwardLeanFrameCount = 0;
   static const int _forwardLeanThresholdFrames = 3;
@@ -272,7 +272,7 @@ class FormChecker {
     if (shoulderWidth > 0) {
       final hipHeightDiff = (leftHip.y - rightHip.y).abs();
       final normalizedHipDiff = hipHeightDiff / shoulderWidth;
-      if (normalizedHipDiff > 0.08) {
+      if (normalizedHipDiff > 0.12) {
         _hipAsymmetryFrameCount++;
         if (_hipAsymmetryFrameCount >= _asymmetryThresholdFrames) {
           _wristTiltFrameCount = 0;
@@ -292,7 +292,7 @@ class FormChecker {
           leftWrist.likelihood >= _confidenceLow && rightWrist.likelihood >= _confidenceLow) {
         final wristHeightDiff = (leftWrist.y - rightWrist.y).abs();
         final normalizedWristDiff = wristHeightDiff / shoulderWidth;
-        if (normalizedWristDiff > 0.15) {
+        if (normalizedWristDiff > 0.20) {
           _wristTiltFrameCount++;
           if (_wristTiltFrameCount >= _asymmetryThresholdFrames) {
             return FormCheckResult(

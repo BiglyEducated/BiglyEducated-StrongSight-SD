@@ -3,8 +3,6 @@ import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 
 /// Custom painter for drawing pose skeleton overlay
 class PoseOverlayPainter extends CustomPainter {
-  static const double _verticalShiftPx = -60.0;
-
   final List<Pose> poses;
   final Size imageSize;
   final InputImageRotation rotation;
@@ -244,7 +242,7 @@ class PoseOverlayPainter extends CustomPainter {
     
     // Apply scaling and offset
     double translatedX = (x * scaleX) + offsetX;
-    double translatedY = (y * scaleY) + offsetY + _verticalShiftPx;
+    double translatedY = (y * scaleY) + offsetY;
     
     // DON'T mirror for front camera - ML Kit already provides mirrored coordinates
     // The camera preview is mirrored, and ML Kit matches that

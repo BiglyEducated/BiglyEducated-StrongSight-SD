@@ -69,8 +69,7 @@ class PoseAnalysisResult {
       case ExerciseState.standing:
         if (isBench) return 'locked out';
         if (isSquat) return 'standing';
-        //if (isRow) return 'arms extended';
-        if (isRow) return 'bar to torso';
+        if (isRow) return 'arms extended';
         if (isOverhead) return 'overhead lockout';
         if (isDeadlift) return 'standing upright';
         return 'ready';
@@ -78,8 +77,7 @@ class PoseAnalysisResult {
       case ExerciseState.descent:
         if (isBench) return 'lowering bar';
         if (isSquat) return 'descending';
-        //if (isRow) return 'pulling';
-        if (isRow) return 'lowering';
+        if (isRow) return 'pulling';
         if (isOverhead) return 'lowering';
         if (isDeadlift) return 'lowering bar';
         return 'lowering';
@@ -87,8 +85,7 @@ class PoseAnalysisResult {
       case ExerciseState.bottom:
         if (isBench) return 'bar at chest';
         if (isSquat) return 'parallel';
-        //if (isRow) return 'bar to torso';
-        if (isRow) return 'arms extended';
+        if (isRow) return 'bar to torso';
         if (isOverhead) return 'bar at shoulders';
         if (isDeadlift) return 'bar at floor';
         return 'bottom';
@@ -96,8 +93,7 @@ class PoseAnalysisResult {
       case ExerciseState.ascending:
         if (isBench) return 'pressing up';
         if (isSquat) return 'ascending';
-        //if (isRow) return 'lowering';
-        if (isRow) return 'pulling';
+        if (isRow) return 'lowering';
         if (isOverhead) return 'pressing overhead';
         if (isDeadlift) return 'lifting';
         return 'rising';
