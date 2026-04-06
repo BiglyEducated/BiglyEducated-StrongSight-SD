@@ -89,7 +89,8 @@ class _LoginPageState extends State<LoginPage> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: isDark
-                        ? const Color(0xFFF3EBD3) // subtle contrast on dark mode
+                        ? const Color(
+                            0xFFF3EBD3) // subtle contrast on dark mode
                         : const Color(0xFFF3EBD3), // matches ivory background
                   ),
                   child: Padding(
@@ -127,8 +128,8 @@ class _LoginPageState extends State<LoginPage> {
                     hintStyle: TextStyle(color: subTextColor),
                     filled: true,
                     fillColor: cardColor,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide:
@@ -136,8 +137,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide:
-                          BorderSide(color: accentColor, width: 1.8),
+                      borderSide: BorderSide(color: accentColor, width: 1.8),
                     ),
                   ),
                 ),
@@ -153,8 +153,8 @@ class _LoginPageState extends State<LoginPage> {
                     hintStyle: TextStyle(color: subTextColor),
                     filled: true,
                     fillColor: cardColor,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide:
@@ -162,16 +162,14 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide:
-                          BorderSide(color: accentColor, width: 1.8),
+                      borderSide: BorderSide(color: accentColor, width: 1.8),
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscure ? Icons.visibility_off : Icons.visibility,
                         color: subTextColor,
                       ),
-                      onPressed: () =>
-                          setState(() => _obscure = !_obscure),
+                      onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
                 ),
@@ -216,8 +214,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 // ---------- Register Link ----------
                 TextButton(
-                  onPressed: () =>
-                      Navigator.pushNamed(context, '/register'),
+                  onPressed: () => Navigator.pushNamed(context, '/register'),
                   child: Text(
                     'or Register',
                     style: TextStyle(
@@ -240,12 +237,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     Padding(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: Text(
-                        'or',
-                        style: TextStyle(color: subTextColor),
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
                     ),
                     Expanded(
                       child: Divider(
@@ -257,74 +249,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 12),
 
-                // ---------- Google Login ----------
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: OutlinedButton.icon(
-                    icon:
-                        Image.asset('assets/images/google.png', height: 20),
-                    label: Text(
-                      'Continue with Google',
-                      style: TextStyle(color: textColor),
-                    ),
-                    onPressed: () {},
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(
-                          color: subTextColor.withOpacity(0.4)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      backgroundColor: cardColor,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // ---------- Apple Login ----------
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: OutlinedButton.icon(
-                    icon:
-                        Image.asset('assets/images/apple.png', height: 20),
-                    label: Text(
-                      'Continue with Apple',
-                      style: TextStyle(color: textColor),
-                    ),
-                    onPressed: () {},
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(
-                          color: subTextColor.withOpacity(0.4)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      backgroundColor: cardColor,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // ---------- Guest Login ----------
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: TextButton(
-                    onPressed: () =>
-                        Navigator.of(context).pushReplacementNamed('/home'),
-                    child: Text(
-                      'Continue as Guest',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: subTextColor,
-                        decoration: TextDecoration.underline,
-                        decorationColor: subTextColor,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
 
                 // ---------- Terms ----------
                 Text(

@@ -1,5 +1,5 @@
 // lib/pages/camera_workout_page.dart
-// BUILD_MARKER: v1
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:camera/camera.dart';
@@ -43,6 +43,9 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
   List<Pose> _detectedPoses = [];
   int _frameSkipCounter = 0;
   static const int _frameSkipRate = 3;
+  static const int _setupDurationSeconds = 10;
+  Timer? _setupTimer;
+  int _setupCountdownSeconds = _setupDurationSeconds;
 
   // Mute toggle (UI only for now - no persistence yet)
   bool _isMuted = false;
@@ -105,6 +108,7 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
 
       print('CameraWorkoutPage: Starting image stream...');
       _cameraService.startImageStream(_processCameraImage);
+      _startSetupCountdown();
       print('CameraWorkoutPage: Initialization complete!');
     } catch (e, stackTrace) {
       print('CameraWorkoutPage ERROR: $e');
@@ -143,9 +147,40 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
 
       await Future.delayed(const Duration(milliseconds: 500));
       _cameraService.startImageStream(_processCameraImage);
+      _startSetupCountdown();
     } catch (e) {
       print('Error switching camera: $e');
     }
+  }
+
+  void _startSetupCountdown() {
+    _setupTimer?.cancel();
+
+    if (!mounted) return;
+    setState(() {
+      _setupCountdownSeconds = _setupDurationSeconds;
+      _feedback = 'Set up your position';
+      _detectedPoses = [];
+    });
+
+    _setupTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      if (_setupCountdownSeconds <= 1) {
+        timer.cancel();
+        setState(() {
+          _setupCountdownSeconds = 0;
+          _feedback = 'Position yourself in frame';
+        });
+      } else {
+        setState(() {
+          _setupCountdownSeconds--;
+        });
+      }
+    });
   }
 
   bool _isRedFeedback(String feedback, bool hasFormError) {
@@ -275,8 +310,6 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
   }
 
   Future<void> _processCameraImage(CameraImage image) async {
-    // Block processing during countdown
-    if (_countdownActive) return;
     // Frame skipping for performance
     _frameSkipCounter++;
     if (_frameSkipCounter % _frameSkipRate != 0) return;
@@ -352,6 +385,9 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    const darkModeGreen = Color(0xFF039E39);
+    const lightModeGreen = Color(0xFF094941);
+    final accentColor = isDark ? darkModeGreen : lightModeGreen;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -364,7 +400,7 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
               style: const TextStyle(color: Colors.white),
             ),
             const Text(
-              'build: 2026-03-29 v5',
+              'build: 2026-04-05 v8',
               style: TextStyle(color: Colors.white54, fontSize: 11),
             ),
           ],
@@ -450,6 +486,10 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
                         });
                         _initializeCamera();
                       },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentColor,
+                        foregroundColor: Colors.white,
+                      ),
                       child: const Text('Retry'),
                     ),
                   ],
@@ -457,13 +497,13 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
               ),
             )
           : !_cameraService.isInitialized
-              ? const Center(
+              ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      CircularProgressIndicator(color: Color(0xFF039E39)),
-                      SizedBox(height: 16),
-                      Text(
+                      CircularProgressIndicator(color: accentColor),
+                      const SizedBox(height: 16),
+                      const Text(
                         'Initializing camera...',
                         style: TextStyle(color: Colors.white),
                       ),
@@ -568,6 +608,7 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
   @override
   void dispose() {
     print('CameraWorkoutPage: dispose called');
+    _setupTimer?.cancel();
     _cameraService.dispose();
     _poseDetector.dispose();
     _soundService.dispose();

@@ -71,7 +71,7 @@ class FormChecker {
 
   int _deadliftAsymmetryFrameCount = 0;
   static const int _deadliftAsymmetryThresholdFrames = 4;
-  static const double _deadliftAsymmetryAngleDiff = 15.0;
+  static const double _deadliftAsymmetryAngleDiff = 17.0;
 
   // Per-joint confidence thresholds
   static const double _confidenceHigh = 0.75;
@@ -144,7 +144,7 @@ class FormChecker {
     _previousState = currentState;
 
     final threshold = _baselineKneeAnkleRatio != null
-        ? _baselineKneeAnkleRatio! * 0.85
+        ? _baselineKneeAnkleRatio! * 0.90
         : _kneeCaveRatio;
 
     if (ratio < threshold) {
