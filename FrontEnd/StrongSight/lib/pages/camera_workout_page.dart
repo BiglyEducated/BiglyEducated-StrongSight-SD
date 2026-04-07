@@ -57,6 +57,17 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
   bool _lastRedForSound = false;
   String _lastRedMsgForSound = '';
 
+  // Head shake to stop tracking
+  int _shakeCount = 0;
+  bool _shakeMovingRight = false;
+  bool _shakeMovingLeft = false;
+  double? _shakeBaselineNoseX;
+  DateTime? _firstShakeTime;
+  static const int _shakesRequired = 3;
+  static const double _shakeThreshold = 0.12; // nose must move 20% of nose-to-shoulder dist sideways
+  static const double _shakeRecoveryThreshold = 0.05;
+  static const Duration _shakeWindowDuration = Duration(seconds: 4);
+
   // Session-level form tracking for end-of-workout summary
   final Map<String, int> _formIssueCounts = {};
   String? _activeFormIssueKey;
@@ -181,6 +192,75 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
         });
       }
     });
+  }
+
+  void _checkShakeGesture(Pose pose) {
+    final nose = pose.landmarks[PoseLandmarkType.nose];
+    final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
+    if (nose == null || leftShoulder == null || rightShoulder == null) return;
+    if (nose.likelihood < 0.6 || leftShoulder.likelihood < 0.6) return;
+
+    // Shoulder width scales with distance — perfect horizontal reference
+    final shoulderWidth = (leftShoulder.x - rightShoulder.x).abs();
+    if (shoulderWidth <= 0) return;
+
+    // Normalize nose X position relative to shoulder midpoint
+    final shoulderMidX = (leftShoulder.x + rightShoulder.x) / 2;
+    final normalizedNoseX = (nose.x - shoulderMidX) / shoulderWidth;
+
+    // Initialize baseline at center
+    _shakeBaselineNoseX ??= normalizedNoseX;
+
+    final offset = normalizedNoseX - _shakeBaselineNoseX!;
+
+    // Reset window if too long between shakes
+    if (_firstShakeTime != null &&
+        DateTime.now().difference(_firstShakeTime!) > _shakeWindowDuration) {
+      _shakeCount = 0;
+      _shakeMovingRight = false;
+      _shakeMovingLeft = false;
+      _firstShakeTime = null;
+    }
+
+    if (!_shakeMovingRight && !_shakeMovingLeft) {
+      if (offset > _shakeThreshold) {
+        _shakeMovingRight = true;
+      } else if (offset < -_shakeThreshold) {
+        _shakeMovingLeft = true;
+      } else {
+        // Head still — slowly update baseline
+        _shakeBaselineNoseX = normalizedNoseX * 0.1 + _shakeBaselineNoseX! * 0.9;
+      }
+    } else if (_shakeMovingRight) {
+      if (offset < -_shakeThreshold) {
+        _shakeMovingRight = false;
+        _shakeMovingLeft = true;
+        _shakeCount++;
+        _firstShakeTime ??= DateTime.now();
+        if (_shakeCount >= _shakesRequired) {
+          _shakeCount = 0;
+          _firstShakeTime = null;
+          _finishWorkout();
+          return;
+        }
+        setState(() {});
+      }
+    } else if (_shakeMovingLeft) {
+      if (offset > _shakeThreshold) {
+        _shakeMovingLeft = false;
+        _shakeMovingRight = true;
+        _shakeCount++;
+        _firstShakeTime ??= DateTime.now();
+        if (_shakeCount >= _shakesRequired) {
+          _shakeCount = 0;
+          _firstShakeTime = null;
+          _finishWorkout();
+          return;
+        }
+        setState(() {});
+      }
+    }
   }
 
   bool _isRedFeedback(String feedback, bool hasFormError) {
@@ -328,6 +408,7 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
       if (!mounted) return;
 
       if (poses.isNotEmpty) {
+        _checkShakeGesture(poses.first);
         final analysis = _poseDetector.analyzeCurrentExerciseForm(poses.first);
 
         if (analysis.isValid) {
@@ -586,6 +667,27 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
                             feedback: _feedback,
                             phase: _currentPhase,
                             hasError: _hasFormError,
+                          ),
+                        ),
+                      ),
+
+                    // Nod counter indicator
+                    if (_shakeCount > 0)
+                      Positioned(
+                        bottom: 110,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.7),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              'Shake to stop: $_shakeCount/$_shakesRequired',
+                              style: const TextStyle(color: Colors.white, fontSize: 14),
+                            ),
                           ),
                         ),
                       ),
