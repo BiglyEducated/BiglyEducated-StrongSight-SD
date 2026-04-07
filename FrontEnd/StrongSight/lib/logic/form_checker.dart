@@ -60,7 +60,7 @@ class FormChecker {
 
   int _overheadLegDriveFrameCount = 0;
   static const int _overheadLegDriveThresholdFrames = 2;
-  static const double _overheadLegDriveDipAngle = 160.0;
+  static const double _overheadLegDriveDipAngle = 168.0;
   static const double _overheadLegDriveRecoveryAngle = 165.0;
   bool _overheadLegDriveDipSeen = false;
 
