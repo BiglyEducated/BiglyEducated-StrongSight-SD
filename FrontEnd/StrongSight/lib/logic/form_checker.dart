@@ -49,7 +49,7 @@ class FormChecker {
 
   // Overhead press checks
   int _overheadLeanFrameCount = 0;
-  static const int _overheadLeanThresholdFrames = 4;
+  static const int _overheadLeanThresholdFrames = 6;
 
   int _overheadAsymmetryFrameCount = 0;
   static const int _overheadAsymmetryThresholdFrames = 4;
@@ -60,8 +60,8 @@ class FormChecker {
 
   int _overheadLegDriveFrameCount = 0;
   static const int _overheadLegDriveThresholdFrames = 2;
-  static const double _overheadLegDriveDipAngle = 175.0;
-  static const double _overheadLegDriveRecoveryAngle = 172.0;
+  static const double _overheadLegDriveDipAngle = 160.0;
+  static const double _overheadLegDriveRecoveryAngle = 165.0;
   bool _overheadLegDriveDipSeen = false;
 
   // Deadlift checks
