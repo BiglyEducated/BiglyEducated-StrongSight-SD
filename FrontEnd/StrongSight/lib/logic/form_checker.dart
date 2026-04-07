@@ -1042,11 +1042,10 @@ class FormChecker {
 
   FormCheckResult checkAllRowForm(Pose pose, ExerciseState currentState) {
     final torsoResult = checkRowTorsoAngle(pose, currentState);
-    final backRoundingResult = checkRowBackRounding(pose, currentState);
     final unevenBarResult = checkRowUnevenBar(pose, currentState);
-    // Elbow drive check disabled — unreliable from front-facing camera
+    // Back rounding and elbow drive disabled — unreliable from front-facing camera
     return _persistError(
-      _prioritizeError([backRoundingResult, unevenBarResult, torsoResult]),
+      _prioritizeError([unevenBarResult, torsoResult]),
     );
   }
 
