@@ -1050,12 +1050,11 @@ class FormChecker {
   }
 
   FormCheckResult checkAllOverheadForm(Pose pose, ExerciseState currentState) {
-    final leanResult = checkOverheadLean(pose, currentState);
     final asymmetryResult = checkOverheadAsymmetry(pose, currentState);
     final wristStackResult = checkOverheadWristStack(pose, currentState);
     final legDriveResult = checkOverheadLegDrive(pose, currentState);
     return _persistError(
-      _prioritizeError([legDriveResult, wristStackResult, leanResult, asymmetryResult]),
+      _prioritizeError([legDriveResult, wristStackResult, asymmetryResult]),
     );
   }
 
