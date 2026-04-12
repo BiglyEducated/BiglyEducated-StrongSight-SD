@@ -516,6 +516,16 @@ List<String> _suggestedFeedbackForIssue(String issueTitle) {
         'Keep your forearms more vertical as you press.',
         'Let the wrists stay stacked over the elbows.',
       ];
+    case 'Head dropping':
+      return const [
+        'Keep your gaze forward and chin up throughout the lift.',
+        'A neutral neck is part of a neutral spine — don\'t let the head drop as you hinge.',
+      ];
+    case 'Bar tilt':
+      return const [
+        'Make sure your grip is even on both sides of the bar.',
+        'Focus on pulling with both arms equally — one side is dominating.',
+      ];
     case 'Back rounding':
       return const [
         'Keep your chest up and spine neutral.',

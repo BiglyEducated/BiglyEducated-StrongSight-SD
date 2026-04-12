@@ -66,12 +66,17 @@ class FormChecker {
 
   // Deadlift checks
   int _backRoundingFrameCount = 0;
-  static const int _backRoundingThresholdFrames = 4;
-  static const double _backRoundingAngleMin = 160.0;
+  static const int _backRoundingThresholdFrames = 3;
+  double? _baselineShoulderWidth;
+  double? _baselineTorsoRatio;
+  double? _baselineAvgKneeAngle; // knee angle at standing (near-straight)
+
+  int _headDropFrameCount = 0;
+  static const int _headDropThresholdFrames = 4;
 
   int _deadliftAsymmetryFrameCount = 0;
   static const int _deadliftAsymmetryThresholdFrames = 4;
-  static const double _deadliftAsymmetryAngleDiff = 17.0;
+  static const double _deadliftAsymmetryAngleDiff = 25.0;
 
   // Per-joint confidence thresholds
   static const double _confidenceHigh = 0.75;
@@ -102,6 +107,10 @@ class FormChecker {
     _overheadLegDriveFrameCount = 0;
     _overheadLegDriveDipSeen = false;
     _backRoundingFrameCount = 0;
+    _baselineShoulderWidth = null;
+    _baselineTorsoRatio = null;
+    _baselineAvgKneeAngle = null;
+    _headDropFrameCount = 0;
     _deadliftAsymmetryFrameCount = 0;
   }
 
@@ -913,35 +922,85 @@ class FormChecker {
 
   // DEADLIFT CHECKS
 
+  /// Detect back rounding by comparing hip hinge depth against knee extension progress.
+  /// In a good deadlift, as knees straighten the torso rises proportionally.
+  /// When the back rounds, hips shoot up early (torso stays low) while knees
+  /// are still significantly bent — the two are out of sync.
   FormCheckResult checkBackRounding(Pose pose, ExerciseState currentState) {
     final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
     final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
+    final rightHip = pose.landmarks[PoseLandmarkType.rightHip];
     final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
+    final rightKnee = pose.landmarks[PoseLandmarkType.rightKnee];
+    final leftAnkle = pose.landmarks[PoseLandmarkType.leftAnkle];
+    final rightAnkle = pose.landmarks[PoseLandmarkType.rightAnkle];
 
-    if (leftShoulder == null || leftHip == null || leftKnee == null ||
-        leftShoulder.likelihood < _confidenceHigh || leftHip.likelihood < _confidenceHigh ||
-        leftKnee.likelihood < _confidenceMed) {
+    if (leftShoulder == null || rightShoulder == null ||
+        leftHip == null || rightHip == null ||
+        leftKnee == null || rightKnee == null ||
+        leftAnkle == null || rightAnkle == null ||
+        leftShoulder.likelihood < _confidenceHigh ||
+        rightShoulder.likelihood < _confidenceHigh ||
+        leftHip.likelihood < _confidenceHigh ||
+        rightHip.likelihood < _confidenceHigh ||
+        leftKnee.likelihood < _confidenceMed ||
+        rightKnee.likelihood < _confidenceMed) {
       _backRoundingFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
 
-    bool isRelevantPhase = currentState == ExerciseState.descent ||
-                           currentState == ExerciseState.bottom ||
-                           currentState == ExerciseState.ascending ||
-                           currentState == ExerciseState.standing;
-    if (!isRelevantPhase) {
+    final shoulderWidth = AngleCalculator.calculateHorizontalDistance(leftShoulder, rightShoulder);
+    if (shoulderWidth <= 0) {
       _backRoundingFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
 
-    double spineAngle = AngleCalculator.calculateAngle(leftShoulder, leftHip, leftKnee);
+    // Torso ratio: how far shoulders are above hips, normalized to shoulder width.
+    // Larger = more upright. Shrinks as you hinge forward.
+    final avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+    final avgHipY = (leftHip.y + rightHip.y) / 2;
+    final torsoRatio = (avgHipY - avgShoulderY) / shoulderWidth;
 
-    if (spineAngle < _backRoundingAngleMin) {
+    // Avg knee angle: 180° = straight, smaller = more bent
+    final leftKneeAngle = AngleCalculator.calculateAngle(leftHip, leftKnee, leftAnkle);
+    final rightKneeAngle = AngleCalculator.calculateAngle(rightHip, rightKnee, rightAnkle);
+    final avgKneeAngle = (leftKneeAngle + rightKneeAngle) / 2;
+
+    if (currentState == ExerciseState.standing) {
+      _baselineTorsoRatio = torsoRatio;
+      _baselineAvgKneeAngle = avgKneeAngle;
+      _backRoundingFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    if (_baselineTorsoRatio == null || _baselineAvgKneeAngle == null) {
+      return FormCheckResult(hasError: false);
+    }
+
+    // Only check during ascent — that's when back rounding shows up under load
+    if (currentState != ExerciseState.ascending) {
+      _backRoundingFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    // How much have knees straightened from bottom? (0.0 = still bent, 1.0 = fully straight)
+    final kneeProgress = (avgKneeAngle - 90.0).clamp(0.0, 90.0) / 90.0;
+
+    // How much has the torso risen from baseline? (0.0 = still hinged, 1.0 = back to upright)
+    final torsoProgress = _baselineTorsoRatio! > 0
+        ? (torsoRatio / _baselineTorsoRatio!).clamp(0.0, 1.0)
+        : 0.0;
+
+    // Back rounding: knees are significantly more extended than the torso has risen.
+    // i.e. hips shot up, back stayed down. Fire if knees are >40% ahead of torso.
+    final desync = kneeProgress - torsoProgress;
+    if (desync > 0.30) {
       _backRoundingFrameCount++;
       if (_backRoundingFrameCount >= _backRoundingThresholdFrames) {
         return FormCheckResult(
           hasError: true,
-          errorMessage: "⚠️ BACK ROUNDING - Keep spine neutral!",
+          errorMessage: "⚠️ BACK ROUNDING - Drive hips and chest up together!",
           errorType: FormErrorType.backRounding,
           severity: FormErrorSeverity.danger,
         );
@@ -952,41 +1011,87 @@ class FormChecker {
     return FormCheckResult(hasError: false);
   }
 
-  FormCheckResult checkDeadliftSymmetry(Pose pose, ExerciseState currentState) {
-    final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
-    final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
-    final leftAnkle = pose.landmarks[PoseLandmarkType.leftAnkle];
-    final rightHip = pose.landmarks[PoseLandmarkType.rightHip];
-    final rightKnee = pose.landmarks[PoseLandmarkType.rightKnee];
-    final rightAnkle = pose.landmarks[PoseLandmarkType.rightAnkle];
+  /// Detect head drop during deadlift.
+  /// Nose should stay above or level with shoulders. If it drops below, cue head up.
+  FormCheckResult checkDeadliftHeadDrop(Pose pose, ExerciseState currentState) {
+    final nose = pose.landmarks[PoseLandmarkType.nose];
+    final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
 
-    if (leftHip == null || leftKnee == null || leftAnkle == null ||
-        rightHip == null || rightKnee == null || rightAnkle == null ||
-        leftHip.likelihood < _confidenceHigh || rightHip.likelihood < _confidenceHigh ||
-        leftKnee.likelihood < _confidenceMed || rightKnee.likelihood < _confidenceMed) {
+    if (nose == null || leftShoulder == null || rightShoulder == null ||
+        nose.likelihood < _confidenceMed ||
+        leftShoulder.likelihood < _confidenceHigh) {
+      _headDropFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    if (currentState == ExerciseState.standing) {
+      _headDropFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
+
+    final avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+    final shoulderWidth = AngleCalculator.calculateHorizontalDistance(leftShoulder, rightShoulder);
+
+    // Nose below shoulder midpoint by more than 20% of shoulder width = head dropped
+    final dropAmount = nose.y - avgShoulderY; // positive = nose lower than shoulders
+    if (dropAmount > shoulderWidth * 0.20) {
+      _headDropFrameCount++;
+      if (_headDropFrameCount >= _headDropThresholdFrames) {
+        return FormCheckResult(
+          hasError: true,
+          errorMessage: "⚠️ HEAD DOWN - Keep your head up!",
+          errorType: FormErrorType.forwardLean,
+          severity: FormErrorSeverity.warning,
+        );
+      }
+    } else {
+      _headDropFrameCount = 0;
+    }
+    return FormCheckResult(hasError: false);
+  }
+
+  /// Check for bar tilt during deadlift via wrist height asymmetry.
+  /// Uneven grip or uneven pull causes one wrist to rise higher than the other.
+  FormCheckResult checkDeadliftBarTilt(Pose pose, ExerciseState currentState) {
+    final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
+    final leftWrist = pose.landmarks[PoseLandmarkType.leftWrist];
+    final rightWrist = pose.landmarks[PoseLandmarkType.rightWrist];
+
+    if (leftShoulder == null || rightShoulder == null ||
+        leftWrist == null || rightWrist == null ||
+        leftWrist.likelihood < _minConfidence ||
+        rightWrist.likelihood < _minConfidence) {
       _deadliftAsymmetryFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
 
-    bool isRelevantPhase = currentState == ExerciseState.descent ||
-                           currentState == ExerciseState.bottom ||
-                           currentState == ExerciseState.ascending;
+    final isRelevantPhase = currentState == ExerciseState.descent ||
+                            currentState == ExerciseState.bottom ||
+                            currentState == ExerciseState.ascending;
     if (!isRelevantPhase) {
       _deadliftAsymmetryFrameCount = 0;
       return FormCheckResult(hasError: false);
     }
 
-    double leftHipAngle = AngleCalculator.calculateAngle(leftHip, leftKnee, leftAnkle);
-    double rightHipAngle = AngleCalculator.calculateAngle(rightHip, rightKnee, rightAnkle);
-    double angleDifference = (leftHipAngle - rightHipAngle).abs();
+    final shoulderWidth = AngleCalculator.calculateHorizontalDistance(leftShoulder, rightShoulder);
+    if (shoulderWidth <= 0) {
+      _deadliftAsymmetryFrameCount = 0;
+      return FormCheckResult(hasError: false);
+    }
 
-    if (angleDifference > _deadliftAsymmetryAngleDiff) {
+    final wristHeightDelta = (leftWrist.y - rightWrist.y).abs();
+    final normalizedTilt = wristHeightDelta / shoulderWidth;
+
+    // > 15% of shoulder width = visible bar tilt
+    if (normalizedTilt > 0.15) {
       _deadliftAsymmetryFrameCount++;
       if (_deadliftAsymmetryFrameCount >= _deadliftAsymmetryThresholdFrames) {
         return FormCheckResult(
           hasError: true,
-          errorMessage: "⚠️ UNEVEN HIPS - Keep hips level!",
-          errorType: FormErrorType.asymmetry,
+          errorMessage: "⚠️ BAR TILT - Pull the bar evenly!",
+          errorType: FormErrorType.barTilt,
           severity: FormErrorSeverity.warning,
         );
       }
@@ -1060,9 +1165,10 @@ class FormChecker {
 
   FormCheckResult checkAllDeadliftForm(Pose pose, ExerciseState currentState) {
     final backRoundingResult = checkBackRounding(pose, currentState);
-    final symmetryResult = checkDeadliftSymmetry(pose, currentState);
+    final headDropResult = checkDeadliftHeadDrop(pose, currentState);
+    final barTiltResult = checkDeadliftBarTilt(pose, currentState);
 
-    return _persistError(_prioritizeError([backRoundingResult, symmetryResult]));
+    return _persistError(_prioritizeError([backRoundingResult, headDropResult, barTiltResult]));
   }
 
   FormCheckResult _prioritizeError(List<FormCheckResult> results) {
