@@ -315,6 +315,7 @@ class _CameraWorkoutPageState extends State<CameraWorkoutPage> {
     if (normalized.contains('HEAD DOWN')) return 'Head dropping';
     if (normalized.contains('LEG DRIVE')) return 'Leg drive';
     if (normalized.contains('UNEVEN HIPS')) return 'Uneven hips';
+    if (normalized.contains('BAR TOO HIGH')) return 'Bar too high';
     if (normalized.contains('BAR TILTING')) return 'Bar tilting on back';
     if (normalized.contains('UNEVEN PRESS')) return 'Uneven press';
     if (normalized.contains('BAR TILT')) return 'Bar tilt';

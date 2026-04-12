@@ -521,10 +521,25 @@ List<String> _suggestedFeedbackForIssue(String issueTitle) {
         'Keep your gaze forward and chin up throughout the lift.',
         'A neutral neck is part of a neutral spine — don\'t let the head drop as you hinge.',
       ];
+    case 'Bar too high':
+      return const [
+        'Lower the bar to your mid-chest or just below.',
+        'Think about tucking your elbows and pulling the bar down to your chest rather than just dropping it.',
+      ];
+    case 'Bar too high':
+      return const [
+        'Let the bar touch lower on your chest, around the lower pec line.',
+        'Flaring elbows tends to push the bar higher — tucking slightly can help.',
+      ];
     case 'Bar tilt':
       return const [
         'Make sure your grip is even on both sides of the bar.',
         'Focus on pulling with both arms equally — one side is dominating.',
+      ];
+    case 'Bar too high':
+      return const [
+        'Lower the bar to your mid-chest or just below the nipple line.',
+        'Flaring elbows can push the bar too high — tuck them slightly.',
       ];
     case 'Back rounding':
       return const [
